@@ -22,7 +22,7 @@ const UserProfile = () => {
   const [profileData, setProfileData] = useState<UserProfileType | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   
-  const isOwnProfile = (!userId && user) || userId === user?.id;
+  const isOwnProfile = (!userId && !!user) || userId === user?.id;
   const displayedProfile = isOwnProfile ? userProfile : profileData;
   const profileId = userId || user?.id;
 

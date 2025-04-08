@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { UserProfile } from '@/types/auth';
 import { toast as toastFunction } from '@/hooks/use-toast';

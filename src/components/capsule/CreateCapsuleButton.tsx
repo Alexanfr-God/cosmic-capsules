@@ -127,10 +127,12 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
         });
         
         // Wait for confirmation
+        console.log("Waiting for transaction confirmation...");
         const receipt = await transaction.wait();
         console.log("Transaction confirmed:", receipt);
         
         if (receipt.status === 1) {
+          console.log("Transaction successful with hash:", transaction.hash);
           toast({
             title: "Payment Successful",
             description: `Your payment of ${amount} ${currency} has been processed`,

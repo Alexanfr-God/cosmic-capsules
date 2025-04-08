@@ -15,6 +15,8 @@ import CapsuleDatePicker from "./capsule/CapsuleDatePicker";
 import CapsulePaymentMethod from "./capsule/CapsulePaymentMethod";
 import CapsuleAuctionToggle from "./capsule/CapsuleAuctionToggle";
 import CreateCapsuleButton from "./capsule/CreateCapsuleButton";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { ExclamationTriangleIcon } from "lucide-react";
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
   const [auctionEnabled, setAuctionEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(0); // 0 = BNB, 1 = ETH
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const { userProfile } = useAuth();
   const { isConnected } = useAccount();
@@ -60,6 +63,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     setPreviewUrl(null);
     setAuctionEnabled(false);
     setPaymentMethod(0);
+    setError(null);
   };
 
   const getPaymentAmountDisplay = () => {
@@ -68,41 +72,56 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
 
   const validateCapsuleData = () => {
     if (!userProfile) {
+      const errMsg = "You must be logged in to create a time capsule";
+      console.error(errMsg);
+      setError(errMsg);
       toast({
         title: "Error",
-        description: "You must be logged in to create a time capsule",
+        description: errMsg,
         variant: "destructive",
       });
       return false;
     }
 
+    console.log("User profile:", userProfile);
+
     if (!isConnected) {
+      const errMsg = "Please connect your wallet to pay for the capsule creation";
+      console.error(errMsg);
+      setError(errMsg);
       toast({
         title: "Error",
-        description: "Please connect your wallet to pay for the capsule creation",
+        description: errMsg,
         variant: "destructive",
       });
       return false;
     }
 
     if (!capsuleName) {
+      const errMsg = "Please enter a name for your time capsule";
+      console.error(errMsg);
+      setError(errMsg);
       toast({
         title: "Error",
-        description: "Please enter a name for your time capsule",
+        description: errMsg,
         variant: "destructive",
       });
       return false;
     }
 
     if (!selectedDate) {
+      const errMsg = "Please select an unlock date for your time capsule";
+      console.error(errMsg);
+      setError(errMsg);
       toast({
         title: "Error",
-        description: "Please select an unlock date for your time capsule",
+        description: errMsg,
         variant: "destructive",
       });
       return false;
     }
 
+    setError(null);
     return true;
   };
 
@@ -111,6 +130,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     
     if (!success) {
       setIsLoading(false);
+      setError("Payment failed. Please try again.");
       return;
     }
     
@@ -127,6 +147,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
       onClose();
     } catch (error: any) {
       console.error("Error creating capsule:", error);
+      setError(error.message || "Capsule creation failed");
       toast({
         title: "Error",
         description: error.message || "Capsule creation failed",
@@ -138,37 +159,73 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
   };
 
   const createCapsuleInDatabase = async (txHash?: string) => {
+    console.log("Creating capsule in database...");
+    console.log("Selected image:", selectedImage);
+    
     let imageUrl: string | null = null;
     if (selectedImage) {
-      const fileExt = selectedImage.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `public/${fileName}`;
+      try {
+        // Check if storage bucket exists
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        
+        if (bucketsError) {
+          console.error("Error checking storage buckets:", bucketsError);
+          throw bucketsError;
+        }
+        
+        const capsuleImagesBucketExists = buckets.some(bucket => bucket.name === 'capsule_images');
+        
+        if (!capsuleImagesBucketExists) {
+          console.error("Storage bucket 'capsule_images' does not exist");
+          throw new Error("Storage bucket 'capsule_images' does not exist. Please create it in Supabase.");
+        }
+        
+        const fileExt = selectedImage.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `public/${fileName}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('capsule_images')
-        .upload(filePath, selectedImage);
+        console.log("Uploading image to path:", filePath);
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('capsule_images')
+          .upload(filePath, selectedImage);
 
-      if (uploadError) {
-        throw uploadError;
+        if (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          throw uploadError;
+        }
+
+        console.log("Image upload successful:", uploadData);
+        imageUrl = supabase.storage.from('capsule_images').getPublicUrl(filePath).data.publicUrl;
+        console.log("Image URL:", imageUrl);
+      } catch (error) {
+        console.error("Image upload failed:", error);
+        // Continue without image if upload fails
       }
-
-      imageUrl = supabase.storage.from('capsule_images').getPublicUrl(filePath).data.publicUrl;
     }
     
-    const content = message || "Empty time capsule";
+    if (!userProfile || !userProfile.id) {
+      console.error("User profile not available");
+      throw new Error("User profile not available. Please log in again.");
+    }
     
+    console.log("Creating capsule with user ID:", userProfile.id);
     const capsuleData = {
       name: capsuleName,
       creator_id: userProfile.id,
       image_url: imageUrl,
       message: message,
-      open_date: selectedDate.toISOString(),
+      open_date: selectedDate?.toISOString(),
+      unlock_date: selectedDate?.toISOString(),
       auction_enabled: auctionEnabled,
       status: 'closed' as 'closed',
       tx_hash: txHash
     };
     
-    return await createCapsule(capsuleData);
+    console.log("Capsule data before creation:", capsuleData);
+    const createdCapsule = await createCapsule(capsuleData);
+    console.log("Capsule created successfully:", createdCapsule);
+    
+    return createdCapsule;
   };
 
   const handleCreateCapsule = async () => {
@@ -188,6 +245,14 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
             CREATE NEW TIME CAPSULE
           </DialogTitle>
         </DialogHeader>
+
+        {error && (
+          <Alert variant="destructive" className="bg-red-900/50 border-red-500 text-white">
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="space-y-6 py-4">
           <CapsuleNameInput capsuleName={capsuleName} setCapsuleName={setCapsuleName} />

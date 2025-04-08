@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
  */
 export const checkWalletConnection = async (): Promise<boolean> => {
   // Check if MetaMask or other wallet is installed
-  if (typeof window.ethereum === "undefined") {
+  if (typeof window === "undefined" || typeof window.ethereum === "undefined") {
     console.log("Wallet not detected");
     toast({
       title: "Wallet Not Found",
@@ -18,11 +18,31 @@ export const checkWalletConnection = async (): Promise<boolean> => {
   }
 
   try {
+    // Check if already connected
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const accounts = await provider.listAccounts();
+    
+    if (accounts && accounts.length > 0) {
+      console.log("Wallet already connected with accounts:", accounts);
+      return true;
+    }
+    
     // Request account access - this will prompt the wallet UI if not already connected
     console.log("Requesting account access");
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-    console.log("Account access granted");
-    return true;
+    const requestedAccounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    
+    if (requestedAccounts && requestedAccounts.length > 0) {
+      console.log("Account access granted:", requestedAccounts);
+      return true;
+    } else {
+      console.log("No accounts available after connection request");
+      toast({
+        title: "Wallet Connection Error",
+        description: "No accounts available. Please unlock your wallet and try again.",
+        variant: "destructive",
+      });
+      return false;
+    }
   } catch (error: any) {
     console.error("Error connecting to wallet:", error);
     toast({

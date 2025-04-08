@@ -51,6 +51,37 @@ export const createCapsule = async (capsuleData: CapsuleCreate) => {
   try {
     console.log("Creating capsule with data:", capsuleData);
     
+    // Validate required fields
+    if (!capsuleData.name) {
+      throw new Error("Capsule name is required");
+    }
+    
+    if (!capsuleData.creator_id) {
+      throw new Error("Creator ID is required");
+    }
+    
+    if (!capsuleData.open_date && !capsuleData.unlock_date) {
+      throw new Error("Open date is required");
+    }
+
+    // Check if the user exists in profiles
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', capsuleData.creator_id)
+      .single();
+
+    if (profileError) {
+      console.error("Error checking user profile:", profileError);
+      if (profileError.code === 'PGRST116') {
+        throw new Error("User profile not found. Please ensure you are logged in correctly.");
+      }
+      throw profileError;
+    }
+
+    console.log("User profile exists:", profileData);
+    
+    // Insert the capsule data
     const { data, error } = await supabase
       .from('capsules')
       .insert({
@@ -61,6 +92,7 @@ export const createCapsule = async (capsuleData: CapsuleCreate) => {
         open_date: capsuleData.open_date || capsuleData.unlock_date,
         auction_enabled: capsuleData.auction_enabled,
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         status: capsuleData.status || 'closed',
         current_bid: 0,
         initial_bid: 0.1,

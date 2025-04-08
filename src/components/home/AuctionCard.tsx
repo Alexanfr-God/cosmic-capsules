@@ -1,18 +1,36 @@
 
-import React from "react";
-import { Clock, Calendar, DollarSign } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Clock, Calendar, DollarSign, Check } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Capsule } from "@/services/capsuleService";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Bid {
+  id: string;
+  bidder_id: string;
+  amount: number;
+  created_at: string;
+  bidder?: {
+    username?: string;
+    avatar_url?: string;
+  };
+}
 
 interface AuctionCardProps {
   capsule: Capsule;
   index: number;
   currentSlide: number;
+  isCreator: boolean;
 }
 
-const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
+const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardProps) => {
+  const [recentBids, setRecentBids] = useState<Bid[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+  
   // Calculate time remaining
   const timeLeft = () => {
     const now = new Date();
@@ -20,6 +38,70 @@ const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
     const diffTime = Math.abs(openDate.getTime() - now.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} days`;
+  };
+
+  // Fetch recent bids
+  useEffect(() => {
+    const fetchRecentBids = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('bids')
+          .select(`
+            id,
+            bidder_id,
+            amount,
+            created_at,
+            bidder:bidder_id(username, avatar_url)
+          `)
+          .eq('capsule_id', capsule.id)
+          .order('created_at', { ascending: false })
+          .limit(3);
+          
+        if (error) {
+          console.error('Error fetching bids:', error);
+          return;
+        }
+        
+        if (data) {
+          setRecentBids(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch recent bids:', error);
+      }
+    };
+    
+    fetchRecentBids();
+  }, [capsule.id]);
+
+  // Handle accepting bid
+  const handleAcceptBid = async (bidId: string) => {
+    if (!isCreator) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('bids')
+        .update({ is_accepted: true })
+        .eq('id', bidId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Bid accepted!",
+        description: "The capsule will be unlocked for the winner.",
+      });
+      
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to accept bid",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -45,6 +127,11 @@ const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
           </div>
           <CardDescription className="text-white/60 font-['Syne',_sans-serif]">
             by @{capsule.creator?.username || "Anonymous"}
+            {isCreator && (
+              <span className="ml-2 bg-neon-pink/20 text-neon-pink text-xs px-2 py-0.5 rounded-full">
+                Your capsule
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,6 +151,47 @@ const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
               <span className="text-[#00ffe0] font-bold animate-pulse">
                 Ξ{capsule.current_bid || (capsule.initial_bid ?? 0.1)}
               </span>
+            </div>
+            
+            {/* Recent bids section */}
+            <div className="mt-4 border-t border-white/10 pt-3">
+              <h4 className="text-white/80 text-sm mb-2">Last bids:</h4>
+              {recentBids.length > 0 ? (
+                <div className="space-y-2">
+                  {recentBids.map((bid) => (
+                    <div key={bid.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={bid.bidder?.avatar_url || undefined} />
+                          <AvatarFallback className="bg-[#302b63] text-[#00ffe0] text-xs">
+                            {bid.bidder?.username?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-white/70 text-xs">
+                          @{bid.bidder?.username || "Anonymous"}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-[#00ffe0] text-xs font-medium">
+                          Ξ{bid.amount}
+                        </span>
+                        {isCreator && (
+                          <Button 
+                            size="sm" 
+                            className="h-6 px-2 text-xs bg-neon-pink hover:bg-neon-pink/80"
+                            onClick={() => handleAcceptBid(bid.id)}
+                            disabled={loading}
+                          >
+                            <Check className="h-3 w-3 mr-1" /> Accept
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-white/40 text-xs text-center py-2">No bids yet</p>
+              )}
             </div>
           </div>
         </CardContent>

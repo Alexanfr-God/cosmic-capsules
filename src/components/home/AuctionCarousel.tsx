@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Capsule } from "@/services/capsuleService";
 import AuctionCard from "./AuctionCard";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AuctionCarouselProps {
   auctionCapsules: Capsule[];
@@ -13,6 +14,7 @@ interface AuctionCarouselProps {
 const AuctionCarousel = ({ auctionCapsules }: AuctionCarouselProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   // Auto-slide functionality
   useEffect(() => {
@@ -85,7 +87,8 @@ const AuctionCarousel = ({ auctionCapsules }: AuctionCarouselProps) => {
                   key={capsule.id} 
                   capsule={capsule} 
                   index={index} 
-                  currentSlide={currentSlide} 
+                  currentSlide={currentSlide}
+                  isCreator={user?.id === capsule.creator_id}
                 />
               ))}
             </div>

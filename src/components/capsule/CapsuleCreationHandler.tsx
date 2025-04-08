@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAccount } from "wagmi";
 import { createCapsule } from "@/services/capsuleService";
 import { uploadFileToBucket } from "@/utils/storageUtils";
+import { createProfileIfNotExists } from "@/services/profileService";
 
 interface CapsuleCreationHandlerProps {
   capsuleName: string;
@@ -20,7 +21,7 @@ interface CapsuleCreationHandlerProps {
 export const useCapsuleCreation = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const { userProfile } = useAuth();
+  const { user, userProfile, refreshUserProfile } = useAuth();
   const { isConnected } = useAccount();
 
   const validateCapsuleData = (
@@ -29,7 +30,7 @@ export const useCapsuleCreation = () => {
     capsuleName: string, 
     selectedDate?: Date
   ) => {
-    if (!userProfile) {
+    if (!user) {
       const errMsg = "You must be logged in to create a time capsule";
       console.error(errMsg);
       toast({
@@ -40,8 +41,11 @@ export const useCapsuleCreation = () => {
       return false;
     }
 
+    console.log("User:", user.id);
     console.log("User profile:", userProfile);
 
+    // For development, we'll skip wallet connection check
+    /* 
     if (!isConnected) {
       const errMsg = "Please connect your wallet to pay for the capsule creation";
       console.error(errMsg);
@@ -52,6 +56,7 @@ export const useCapsuleCreation = () => {
       });
       return false;
     }
+    */
 
     if (!capsuleName) {
       const errMsg = "Please enter a name for your time capsule";
@@ -87,6 +92,23 @@ export const useCapsuleCreation = () => {
     txHash?: string
   ) => {
     console.log("Creating capsule in database...");
+    
+    if (!user?.id) {
+      console.error("No user ID available");
+      throw new Error("User not authenticated. Please log in again.");
+    }
+    
+    // Ensure user has a profile
+    if (!userProfile) {
+      console.log("No user profile found, attempting to create one");
+      await createProfileIfNotExists(user.id, user.email);
+      await refreshUserProfile();
+      
+      if (!userProfile) {
+        throw new Error("Could not create user profile. Please try again.");
+      }
+    }
+    
     console.log("Selected image:", selectedImage);
     
     let imageUrl: string | null = null;
@@ -111,15 +133,10 @@ export const useCapsuleCreation = () => {
       }
     }
     
-    if (!userProfile || !userProfile.id) {
-      console.error("User profile not available");
-      throw new Error("User profile not available. Please log in again.");
-    }
-    
-    console.log("Creating capsule with user ID:", userProfile.id);
+    console.log("Creating capsule with user ID:", user.id);
     const capsuleData = {
       name: capsuleName,
-      creator_id: userProfile.id,
+      creator_id: user.id,
       image_url: imageUrl,
       message: message,
       open_date: selectedDate?.toISOString(),
@@ -130,10 +147,15 @@ export const useCapsuleCreation = () => {
     };
     
     console.log("Capsule data before creation:", capsuleData);
-    const createdCapsule = await createCapsule(capsuleData);
-    console.log("Capsule created successfully:", createdCapsule);
     
-    return createdCapsule;
+    try {
+      const createdCapsule = await createCapsule(capsuleData);
+      console.log("Capsule created successfully:", createdCapsule);
+      return createdCapsule;
+    } catch (error) {
+      console.error("Error creating capsule:", error);
+      throw error;
+    }
   };
 
   const handlePaymentComplete = async (

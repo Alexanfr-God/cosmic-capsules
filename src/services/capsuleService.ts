@@ -74,12 +74,32 @@ export const createCapsule = async (capsuleData: CapsuleCreate) => {
     if (profileError) {
       console.error("Error checking user profile:", profileError);
       if (profileError.code === 'PGRST116') {
-        throw new Error("User profile not found. Please ensure you are logged in correctly.");
+        // Profile not found, create a default one
+        console.log("User profile not found, creating a default profile");
+        
+        const { data: newProfile, error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: capsuleData.creator_id,
+            username: `user_${Date.now().toString().slice(-4)}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
+        if (createProfileError) {
+          console.error("Error creating default profile:", createProfileError);
+          throw new Error("Could not create user profile. Please try logging in again.");
+        }
+        
+        console.log("Default profile created:", newProfile);
+      } else {
+        throw profileError;
       }
-      throw profileError;
+    } else {
+      console.log("User profile exists:", profileData);
     }
-
-    console.log("User profile exists:", profileData);
     
     // Insert the capsule data
     const { data, error } = await supabase
@@ -109,7 +129,7 @@ export const createCapsule = async (capsuleData: CapsuleCreate) => {
 
     console.log("Capsule created successfully:", data);
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error in createCapsule:", error);
     throw error;
   }

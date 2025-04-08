@@ -2,55 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Ensures that the required storage bucket exists, creates it if it doesn't
- * @param bucketName The name of the bucket to check/create
- * @returns A promise that resolves to true if the bucket exists or was created successfully
- */
-export const ensureStorageBucketExists = async (bucketName: string): Promise<boolean> => {
-  try {
-    console.log(`Checking if storage bucket '${bucketName}' exists...`);
-    
-    // Check if bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-    
-    if (listError) {
-      console.error(`Error listing storage buckets:`, listError);
-      throw listError;
-    }
-    
-    const bucketExists = buckets.some(bucket => bucket.name === bucketName);
-    
-    if (bucketExists) {
-      console.log(`Bucket '${bucketName}' already exists.`);
-      return true;
-    }
-    
-    console.log(`Bucket '${bucketName}' not found. Attempting to create it...`);
-    
-    // Try to create the bucket
-    const { data: newBucket, error: createError } = await supabase.storage.createBucket(bucketName, {
-      public: true
-    });
-    
-    if (createError) {
-      console.error(`Error creating bucket '${bucketName}':`, createError);
-      throw createError;
-    }
-    
-    console.log(`Successfully created bucket '${bucketName}':`, newBucket);
-    return true;
-  } catch (error) {
-    console.error(`Failed to ensure bucket '${bucketName}' exists:`, error);
-    return false;
-  }
-};
-
-/**
- * Uploads a file to a storage bucket
- * @param bucketName The name of the bucket to upload to
- * @param filePath The path where the file will be stored
- * @param file The file to upload
- * @returns The public URL of the uploaded file or null if upload failed
+ * Uploads a file to the specified bucket with the given path
  */
 export const uploadFileToBucket = async (
   bucketName: string,
@@ -58,33 +10,81 @@ export const uploadFileToBucket = async (
   file: File
 ): Promise<string | null> => {
   try {
-    console.log(`Uploading file to ${bucketName}/${filePath}...`);
+    console.log(`Uploading file to bucket ${bucketName} at path ${filePath}`);
     
-    // Ensure bucket exists
-    const bucketExists = await ensureStorageBucketExists(bucketName);
-    if (!bucketExists) {
-      throw new Error(`Storage bucket '${bucketName}' does not exist and could not be created.`);
-    }
+    // Ensure the bucket exists
+    await ensureStorageBucketExists(bucketName);
     
     // Upload the file
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from(bucketName)
       .upload(filePath, file);
-      
+
     if (uploadError) {
       console.error("Error uploading file:", uploadError);
       throw uploadError;
     }
-    
-    // Get the public URL
+
+    // Get the public URL of the uploaded file
     const { data } = supabase.storage
       .from(bucketName)
       .getPublicUrl(filePath);
-      
-    console.log("File uploaded successfully. Public URL:", data.publicUrl);
+
+    console.log("File uploaded successfully:", data.publicUrl);
     return data.publicUrl;
   } catch (error) {
-    console.error("File upload failed:", error);
+    console.error("Error uploading file:", error);
     return null;
+  }
+};
+
+/**
+ * Ensures that the specified storage bucket exists, creates it if it doesn't
+ */
+export const ensureStorageBucketExists = async (bucketName: string): Promise<boolean> => {
+  try {
+    console.log(`Checking if bucket ${bucketName} exists`);
+    
+    // Get list of all buckets
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error("Error listing buckets:", listError);
+      throw listError;
+    }
+    
+    // Check if the bucket exists
+    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+    
+    if (!bucketExists) {
+      console.log(`Bucket ${bucketName} does not exist, creating it...`);
+      
+      // Create the bucket with public access
+      const { error: createError } = await supabase.storage.createBucket(bucketName, {
+        public: true,
+        fileSizeLimit: 5242880, // 5MB limit
+      });
+      
+      if (createError) {
+        console.error("Error creating bucket:", createError);
+        
+        // If the bucket already exists (concurrent creation), ignore the error
+        if (createError.message.includes("already exists")) {
+          console.log("Bucket already exists, concurrent creation detected");
+          return true;
+        }
+        
+        throw createError;
+      }
+      
+      console.log(`Bucket ${bucketName} created successfully`);
+    } else {
+      console.log(`Bucket ${bucketName} already exists`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error ensuring bucket exists:", error);
+    return false;
   }
 };

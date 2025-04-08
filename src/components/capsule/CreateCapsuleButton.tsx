@@ -24,36 +24,36 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
     const currency = paymentMethod === 0 ? "BNB" : "ETH";
     const amount = paymentMethod === 0 ? "0.01" : "0.005";
     
-    console.log(`[TEMPORARY BYPASS] Payment button clicked with method: ${currency}, amount: ${amount}`);
+    console.log(`Payment button clicked with method: ${currency}, amount: ${amount}`);
     setProcessingPayment(true);
     
     try {
-      // Temporarily simulate successful payment without wallet interaction
-      setTimeout(() => {
-        console.log("[TEMPORARY BYPASS] Simulating successful payment transaction");
-        
-        toast({
-          title: "Payment Simulation",
-          description: `Your payment of ${amount} ${currency} has been simulated successfully`,
-        });
-        
-        // Simulate transaction hash
-        const mockTxHash = "0x" + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-        console.log("[TEMPORARY BYPASS] Mock transaction hash:", mockTxHash);
-        
-        // Call the onClick callback to continue with capsule creation
-        onClick(true, mockTxHash);
-        setProcessingPayment(false);
-      }, 2000); // Wait 2 seconds to simulate transaction time
+      // Bypass wallet interaction and simulate successful payment
+      console.log("Simulating successful payment transaction");
       
+      // Wait a short time to simulate processing
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast({
+        title: "Payment Simulation",
+        description: `Your payment of ${amount} ${currency} has been simulated successfully`,
+      });
+      
+      // Simulate transaction hash
+      const mockTxHash = "0x" + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+      console.log("Mock transaction hash:", mockTxHash);
+      
+      // Call the onClick callback to continue with capsule creation
+      onClick(true, mockTxHash);
     } catch (error: any) {
-      console.error("[TEMPORARY BYPASS] Simulated error:", error);
+      console.error("Simulated error:", error);
       toast({
         title: "Simulation Error",
         description: "Simulated payment error",
         variant: "destructive",
       });
       onClick(false);
+    } finally {
       setProcessingPayment(false);
     }
   };

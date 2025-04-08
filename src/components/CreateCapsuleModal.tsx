@@ -1,8 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Import sub-components
 import CapsuleNameInput from "./capsule/CapsuleNameInput";
@@ -13,6 +14,7 @@ import CapsulePaymentMethod from "./capsule/CapsulePaymentMethod";
 import CapsuleAuctionToggle from "./capsule/CapsuleAuctionToggle";
 import CreateCapsuleButton from "./capsule/CreateCapsuleButton";
 import { useCapsuleCreation } from "./capsule/CapsuleCreationHandler";
+import { ensureStorageBucketExists } from "@/utils/storageUtils";
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -20,6 +22,7 @@ interface CreateCapsuleModalProps {
 }
 
 const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
+  const { user, refreshUserProfile } = useAuth();
   const [capsuleName, setCapsuleName] = useState("");
   const [message, setMessage] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -37,6 +40,22 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     userProfile,
     isConnected
   } = useCapsuleCreation();
+
+  // Ensure the storage bucket exists when the component mounts
+  useEffect(() => {
+    const initializeStorage = async () => {
+      await ensureStorageBucketExists('capsule_images');
+    };
+    
+    if (isOpen) {
+      initializeStorage();
+      
+      // Also refresh user profile when modal opens
+      if (user) {
+        refreshUserProfile();
+      }
+    }
+  }, [isOpen, user, refreshUserProfile]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

@@ -5,14 +5,25 @@ import { toast as toastFunction } from '@/hooks/use-toast';
 
 // Fetch user profile
 export const fetchUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  if (!userId) {
+    console.error('fetchUserProfile called with empty userId');
+    return null;
+  }
+  
   try {
+    console.log(`Fetching user profile for ID: ${userId}`);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
       .maybeSingle();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching user profile:', error);
+      throw error;
+    }
+    
+    console.log('Profile fetch result:', data);
     return data;
   } catch (error) {
     console.error('Error fetching user profile:', error);
@@ -27,6 +38,15 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
       toastFunction({
         title: "No file selected",
         description: "Please choose an image to upload",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    if (!userId) {
+      toastFunction({
+        title: "Authentication Error",
+        description: "You must be logged in to upload an avatar",
         variant: "destructive"
       });
       return null;
@@ -76,17 +96,59 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
   }
 };
 
-// Keep existing wallet address update function
+// Update wallet address
 export const updateWalletAddress = async (userId: string, address: string): Promise<void> => {
   try {
+    if (!userId || !address) {
+      console.error('Missing userId or address in updateWalletAddress');
+      return;
+    }
+
+    console.log(`Updating wallet address for user ${userId} to ${address}`);
+    
     const { error } = await supabase
       .from('profiles')
       .update({ wallet_address: address })
       .eq('id', userId);
     
     if (error) throw error;
+    
+    console.log('Wallet address updated successfully');
   } catch (error) {
     console.error('Error updating wallet address:', error);
     throw error;
+  }
+};
+
+// Create profile if it doesn't exist
+export const createProfileIfNotExists = async (userId: string, email?: string): Promise<UserProfile | null> => {
+  try {
+    // First check if profile exists
+    const existingProfile = await fetchUserProfile(userId);
+    if (existingProfile) return existingProfile;
+    
+    // Create new profile if it doesn't exist
+    const username = email ? email.split('@')[0] : `user_${Date.now().toString().slice(-4)}`;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        username: username,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating profile:', error);
+      throw error;
+    }
+    
+    return data as UserProfile;
+  } catch (error) {
+    console.error('Error in createProfileIfNotExists:', error);
+    return null;
   }
 };

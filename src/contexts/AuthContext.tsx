@@ -20,9 +20,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Refresh user profile data
   const refreshUserProfile = async () => {
     if (user?.id) {
-      const profile = await fetchUserProfile(user.id);
-      if (profile) {
-        setUserProfile(profile);
+      try {
+        console.log("Refreshing user profile for ID:", user.id);
+        const profile = await fetchUserProfile(user.id);
+        
+        if (profile) {
+          console.log("Profile data retrieved:", profile);
+          setUserProfile(profile);
+        } else {
+          console.log("No profile found, attempting to create one");
+          // Create a default profile if none exists
+          const { data: newProfile, error } = await supabase
+            .from('profiles')
+            .insert({ 
+              id: user.id,
+              username: user.email?.split('@')[0] || `user_${Date.now().toString().slice(-4)}`,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (error) {
+            console.error("Error creating user profile:", error);
+            toast({
+              title: "Profile Error",
+              description: "Could not create user profile",
+              variant: "destructive",
+            });
+          } else if (newProfile) {
+            console.log("New profile created:", newProfile);
+            setUserProfile(newProfile as UserProfile);
+          }
+        }
+      } catch (error) {
+        console.error("Error in refreshUserProfile:", error);
       }
     }
   };
@@ -45,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const updateUserWalletAddress = async () => {
       if (user && address && userProfile && userProfile.wallet_address !== address) {
+        console.log("Updating wallet address:", address);
         await updateWalletAddress(user.id, address);
         
         // Refresh user profile
@@ -59,15 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // First, set up the auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
+        console.log("Auth state changed:", _event, "User:", session?.user?.id);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          fetchUserProfile(session.user.id).then(profile => {
-            if (profile) {
-              setUserProfile(profile);
-            }
-          });
+          // Don't refresh the profile directly here to avoid Supabase auth deadlock
+          setTimeout(() => {
+            refreshUserProfile();
+          }, 0);
         } else {
           setUserProfile(null);
         }
@@ -78,15 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("Existing session check:", session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(profile => {
-          if (profile) {
-            setUserProfile(profile);
-          }
-        });
+        refreshUserProfile();
       }
       
       setIsLoading(false);

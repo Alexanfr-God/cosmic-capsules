@@ -39,7 +39,7 @@ export const getUserCapsules = async (userId: string): Promise<Capsule[]> => {
     // Transform the data to ensure it matches the Capsule type
     const capsules = data?.map(item => ({
       ...item,
-      creator: item.creator as UserProfile
+      creator: item.creator && typeof item.creator !== 'string' ? item.creator as unknown as UserProfile : null
     })) || [];
     
     return capsules;
@@ -69,7 +69,7 @@ export const getUpcomingCapsules = async (limit: number = 6): Promise<Capsule[]>
     // Transform the data to ensure it matches the Capsule type
     const capsules = data?.map(item => ({
       ...item,
-      creator: item.creator as UserProfile
+      creator: item.creator && typeof item.creator !== 'string' ? item.creator as unknown as UserProfile : null
     })) || [];
     
     return capsules;
@@ -100,7 +100,7 @@ export const getAuctionCapsules = async (limit: number = 10): Promise<Capsule[]>
     // Transform the data to ensure it matches the Capsule type
     const capsules = data?.map(item => ({
       ...item,
-      creator: item.creator as UserProfile
+      creator: item.creator && typeof item.creator !== 'string' ? item.creator as unknown as UserProfile : null
     })) || [];
     
     return capsules;
@@ -128,7 +128,7 @@ export const getAllCapsules = async (): Promise<Capsule[]> => {
     // Transform the data to ensure it matches the Capsule type
     const capsules = data?.map(item => ({
       ...item,
-      creator: item.creator as UserProfile
+      creator: item.creator && typeof item.creator !== 'string' ? item.creator as unknown as UserProfile : null
     })) || [];
     
     return capsules;
@@ -138,7 +138,20 @@ export const getAllCapsules = async (): Promise<Capsule[]> => {
   }
 };
 
-export const createCapsule = async (capsuleData: Omit<Partial<Capsule>, 'creator'>): Promise<Capsule> => {
+// Define a more specific type for capsule creation data
+type CapsuleCreationData = {
+  name: string;
+  creator_id: string;
+  open_date: string;
+  message?: string;
+  image_url?: string | null;
+  auction_enabled?: boolean;
+  status?: string;
+  initial_bid?: number;
+  [key: string]: any; // Allow for additional properties
+};
+
+export const createCapsule = async (capsuleData: CapsuleCreationData): Promise<Capsule> => {
   try {
     if (!capsuleData.creator_id) {
       throw new Error('creator_id is required for capsule creation');

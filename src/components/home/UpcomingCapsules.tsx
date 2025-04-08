@@ -1,13 +1,42 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Capsule } from "@/services/capsuleService";
+import { addDays } from "date-fns";
 
 interface UpcomingCapsulesProps {
   upcomingCapsules: Capsule[];
 }
 
 const UpcomingCapsules = ({ upcomingCapsules }: UpcomingCapsulesProps) => {
+  const [displayCapsules, setDisplayCapsules] = useState<Capsule[]>(upcomingCapsules);
+  
+  // Create a demo capsule that opens tomorrow
+  useEffect(() => {
+    const tomorrow = addDays(new Date(), 1);
+    const demoCapsule: Capsule = {
+      id: "demo-capsule",
+      name: "Demo Capsule (Opens Tomorrow)",
+      message: "This is a demo capsule to show how it would appear",
+      open_date: tomorrow.toISOString(),
+      status: "closed",
+      creator_id: "demo-user",
+      creator: {
+        id: "demo-user",
+        username: "Demo User",
+        avatar_url: null
+      },
+      created_at: new Date().toISOString()
+    };
+    
+    // Add the demo capsule to the display capsules
+    if (upcomingCapsules.length === 0 || !upcomingCapsules.some(c => c.id === "demo-capsule")) {
+      setDisplayCapsules([...upcomingCapsules, demoCapsule]);
+    } else {
+      setDisplayCapsules(upcomingCapsules);
+    }
+  }, [upcomingCapsules]);
+
   return (
     <section className="py-24 bg-space-dark">
       <div className="container mx-auto px-4">
@@ -16,8 +45,8 @@ const UpcomingCapsules = ({ upcomingCapsules }: UpcomingCapsulesProps) => {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {upcomingCapsules.length > 0 ? (
-            upcomingCapsules.map((capsule) => (
+          {displayCapsules.length > 0 ? (
+            displayCapsules.map((capsule) => (
               <Card 
                 key={capsule.id}
                 className="bg-space-light/10 backdrop-blur-xl border border-neon-green/20 hover:border-neon-green/60 transition-all"

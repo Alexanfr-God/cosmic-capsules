@@ -44,27 +44,41 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
   useEffect(() => {
     const fetchRecentBids = async () => {
       try {
-        const { data, error } = await supabase
+        // First, get the bids for this capsule
+        const { data: bidsData, error: bidsError } = await supabase
           .from('bids')
-          .select(`
-            id,
-            bidder_id,
-            amount,
-            created_at,
-            bidder:bidder_id(username, avatar_url)
-          `)
+          .select('id, bidder_id, amount, created_at')
           .eq('capsule_id', capsule.id)
           .order('created_at', { ascending: false })
           .limit(3);
           
-        if (error) {
-          console.error('Error fetching bids:', error);
+        if (bidsError) {
+          console.error('Error fetching bids:', bidsError);
           return;
         }
         
-        if (data) {
-          setRecentBids(data);
+        if (!bidsData || bidsData.length === 0) {
+          setRecentBids([]);
+          return;
         }
+        
+        // Then, fetch bidder profiles separately for each bid
+        const bidsWithProfiles = await Promise.all(
+          bidsData.map(async (bid) => {
+            const { data: bidderData } = await supabase
+              .from('profiles')
+              .select('username, avatar_url')
+              .eq('id', bid.bidder_id)
+              .single();
+            
+            return {
+              ...bid,
+              bidder: bidderData || { username: 'Anonymous', avatar_url: undefined }
+            };
+          })
+        );
+        
+        setRecentBids(bidsWithProfiles);
       } catch (error) {
         console.error('Failed to fetch recent bids:', error);
       }

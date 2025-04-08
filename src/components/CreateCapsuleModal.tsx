@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -6,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { createCapsule } from "@/services/capsuleService";
 import { useAccount } from "wagmi";
+import { uploadFileToBucket } from "@/utils/storageUtils";
 
 // Import sub-components
 import CapsuleNameInput from "./capsule/CapsuleNameInput";
@@ -165,38 +165,19 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     let imageUrl: string | null = null;
     if (selectedImage) {
       try {
-        // Check if storage bucket exists
-        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-        
-        if (bucketsError) {
-          console.error("Error checking storage buckets:", bucketsError);
-          throw bucketsError;
-        }
-        
-        const capsuleImagesBucketExists = buckets.some(bucket => bucket.name === 'capsule_images');
-        
-        if (!capsuleImagesBucketExists) {
-          console.error("Storage bucket 'capsule_images' does not exist");
-          throw new Error("Storage bucket 'capsule_images' does not exist. Please create it in Supabase.");
-        }
-        
+        const bucketName = "capsule_images";
         const fileExt = selectedImage.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `public/${fileName}`;
 
         console.log("Uploading image to path:", filePath);
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('capsule_images')
-          .upload(filePath, selectedImage);
-
-        if (uploadError) {
-          console.error("Error uploading image:", uploadError);
-          throw uploadError;
+        imageUrl = await uploadFileToBucket(bucketName, filePath, selectedImage);
+        
+        if (!imageUrl) {
+          console.error("Failed to get image URL after upload");
+        } else {
+          console.log("Image URL:", imageUrl);
         }
-
-        console.log("Image upload successful:", uploadData);
-        imageUrl = supabase.storage.from('capsule_images').getPublicUrl(filePath).data.publicUrl;
-        console.log("Image URL:", imageUrl);
       } catch (error) {
         console.error("Image upload failed:", error);
         // Continue without image if upload fails

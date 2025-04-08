@@ -99,13 +99,40 @@ export const useCapsuleCreation = () => {
     }
     
     // Ensure user has a profile
-    if (!userProfile) {
+    let profile = userProfile;
+    if (!profile) {
       console.log("No user profile found, attempting to create one");
-      await createProfileIfNotExists(user.id, user.email);
-      await refreshUserProfile();
-      
-      if (!userProfile) {
-        throw new Error("Could not create user profile. Please try again.");
+      try {
+        await createProfileIfNotExists(user.id, user.email);
+        await refreshUserProfile();
+        
+        // Still no profile? Create a default one directly
+        if (!userProfile) {
+          console.log("Still no user profile after refresh, creating default one directly");
+          const { data: newProfile, error } = await supabase
+            .from('profiles')
+            .upsert({
+              id: user.id,
+              username: `user_${Date.now().toString().slice(-4)}`,
+              full_name: user.email?.split('@')[0] || 'User',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+            
+          if (error) {
+            console.error("Error creating profile:", error);
+          } else {
+            console.log("Successfully created profile:", newProfile);
+            profile = newProfile;
+          }
+        } else {
+          profile = userProfile;
+        }
+      } catch (error) {
+        console.error("Error creating profile:", error);
+        // Continue anyway, the service will create a profile if needed
       }
     }
     
@@ -216,3 +243,5 @@ export const useCapsuleCreation = () => {
     isConnected
   };
 };
+
+import { supabase } from "@/integrations/supabase/client";

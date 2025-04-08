@@ -21,6 +21,11 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
   const [processingPayment, setProcessingPayment] = useState(false);
 
   const handlePayment = async () => {
+    if (isLoading || processingPayment) {
+      console.log("Payment already in progress, ignoring click");
+      return;
+    }
+    
     const currency = paymentMethod === 0 ? "BNB" : "ETH";
     const amount = paymentMethod === 0 ? "0.01" : "0.005";
     
@@ -28,11 +33,11 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
     setProcessingPayment(true);
     
     try {
-      // Bypass wallet interaction and simulate successful payment
+      // Always simulate a successful payment (skip wallet interaction)
       console.log("Simulating successful payment transaction");
       
       // Wait a short time to simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       toast({
         title: "Payment Simulation",
@@ -44,7 +49,10 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
       console.log("Mock transaction hash:", mockTxHash);
       
       // Call the onClick callback to continue with capsule creation
-      onClick(true, mockTxHash);
+      // Set a short timeout to ensure UI updates before continuing
+      setTimeout(() => {
+        onClick(true, mockTxHash);
+      }, 100);
     } catch (error: any) {
       console.error("Simulated error:", error);
       toast({

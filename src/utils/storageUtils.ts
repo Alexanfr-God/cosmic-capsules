@@ -50,7 +50,7 @@ export const ensureStorageBucketExists = async (bucketName: string): Promise<boo
     
     if (listError) {
       console.error("Error listing buckets:", listError);
-      throw listError;
+      // Don't throw error here, try to create bucket anyway
     }
     
     // Check if the bucket exists
@@ -58,6 +58,16 @@ export const ensureStorageBucketExists = async (bucketName: string): Promise<boo
     
     if (!bucketExists) {
       console.log(`Bucket ${bucketName} does not exist, creating it...`);
+      
+      // Check if bucket with same name already exists
+      const checkBucketResponse = await supabase.storage
+        .getBucket(bucketName);
+      
+      // If the bucket already exists, return true
+      if (checkBucketResponse.data) {
+        console.log(`Bucket ${bucketName} already exists according to getBucket`);
+        return true;
+      }
       
       // Create the bucket with public access
       const { error: createError } = await supabase.storage.createBucket(bucketName, {
@@ -69,12 +79,14 @@ export const ensureStorageBucketExists = async (bucketName: string): Promise<boo
         console.error("Error creating bucket:", createError);
         
         // If the bucket already exists (concurrent creation), ignore the error
-        if (createError.message.includes("already exists")) {
+        if (createError.message?.includes("already exists")) {
           console.log("Bucket already exists, concurrent creation detected");
           return true;
         }
         
-        throw createError;
+        // Attempt to continue without throwing an error
+        console.log("Continuing despite bucket creation error");
+        return false;
       }
       
       console.log(`Bucket ${bucketName} created successfully`);
@@ -85,6 +97,7 @@ export const ensureStorageBucketExists = async (bucketName: string): Promise<boo
     return true;
   } catch (error) {
     console.error("Error ensuring bucket exists:", error);
+    // Continue without the bucket rather than failing the entire process
     return false;
   }
 };

@@ -15,6 +15,7 @@ import CapsuleAuctionToggle from "./capsule/CapsuleAuctionToggle";
 import CreateCapsuleButton from "./capsule/CreateCapsuleButton";
 import { useCapsuleCreation } from "./capsule/CapsuleCreationHandler";
 import { ensureStorageBucketExists } from "@/utils/storageUtils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -41,18 +42,64 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     isConnected
   } = useCapsuleCreation();
 
-  // Ensure the storage bucket exists when the component mounts
+  // Initialize storage and refresh user profile when the modal opens
   useEffect(() => {
     const initializeStorage = async () => {
-      await ensureStorageBucketExists('capsule_images');
+      try {
+        await ensureStorageBucketExists('capsule_images');
+        console.log("Storage bucket initialized");
+      } catch (error) {
+        console.error("Error initializing storage bucket:", error);
+      }
     };
     
     if (isOpen) {
+      console.log("Modal opened, initializing...");
       initializeStorage();
       
-      // Also refresh user profile when modal opens
+      // Refresh user profile when modal opens
       if (user) {
-        refreshUserProfile();
+        console.log("Refreshing user profile...");
+        refreshUserProfile().catch(err => {
+          console.error("Error refreshing user profile:", err);
+        });
+
+        // Ensure user profile exists
+        const checkProfile = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', user.id)
+              .single();
+            
+            if (error || !data) {
+              console.log("Profile not found, creating default profile");
+              const { error: insertError } = await supabase
+                .from('profiles')
+                .upsert({
+                  id: user.id,
+                  username: `user_${Date.now().toString().slice(-4)}`,
+                  full_name: user.email?.split('@')[0] || 'User',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              
+              if (insertError) {
+                console.error("Error creating profile:", insertError);
+              } else {
+                console.log("Default profile created");
+                refreshUserProfile();
+              }
+            } else {
+              console.log("User profile exists:", data);
+            }
+          } catch (err) {
+            console.error("Error checking profile:", err);
+          }
+        };
+        
+        checkProfile();
       }
     }
   }, [isOpen, user, refreshUserProfile]);
@@ -91,27 +138,39 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
   };
 
   const onPaymentCompleteHandler = async (success: boolean, txHash?: string) => {
+    console.log("Payment completed handler called with success:", success);
+    
     if (!validateCapsuleData(userProfile, isConnected, capsuleName, selectedDate)) {
       return;
     }
 
-    setIsLoading(true);
-    await handlePaymentComplete(
-      success, 
-      capsuleName, 
-      message, 
-      selectedDate, 
-      selectedImage, 
-      auctionEnabled,
-      () => {
-        resetForm();
-        onClose();
-      },
-      (errorMessage: string) => {
-        setError(errorMessage);
-      },
-      txHash
-    );
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      await handlePaymentComplete(
+        success, 
+        capsuleName, 
+        message, 
+        selectedDate, 
+        selectedImage, 
+        auctionEnabled,
+        () => {
+          console.log("Capsule creation succeeded, resetting form and closing modal");
+          resetForm();
+          onClose();
+        },
+        (errorMessage: string) => {
+          console.error("Capsule creation failed with error:", errorMessage);
+          setError(errorMessage);
+        },
+        txHash
+      );
+    } catch (err: any) {
+      console.error("Unexpected error in payment completion handler:", err);
+      setError(err.message || "An unexpected error occurred");
+      setIsLoading(false);
+    }
   };
 
   return (

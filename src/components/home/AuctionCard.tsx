@@ -7,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Capsule } from "@/services/capsuleService";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import PlaceBidModal from "../bidding/PlaceBidModal";
 
 interface Bid {
   id: string;
@@ -29,6 +30,7 @@ interface AuctionCardProps {
 const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardProps) => {
   const [recentBids, setRecentBids] = useState<Bid[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const { toast } = useToast();
   
   // Calculate time remaining
@@ -40,50 +42,50 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
     return `${diffDays} days`;
   };
 
+  const fetchRecentBids = async () => {
+    try {
+      // First, get the bids for this capsule
+      const { data: bidsData, error: bidsError } = await supabase
+        .from('bids')
+        .select('id, bidder_id, amount, created_at')
+        .eq('capsule_id', capsule.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+        
+      if (bidsError) {
+        console.error('Error fetching bids:', bidsError);
+        return;
+      }
+      
+      if (!bidsData || bidsData.length === 0) {
+        setRecentBids([]);
+        return;
+      }
+      
+      // Then, fetch bidder profiles separately for each bid
+      const bidsWithProfiles = await Promise.all(
+        bidsData.map(async (bid) => {
+          const { data: bidderData } = await supabase
+            .from('profiles')
+            .select('username, avatar_url')
+            .eq('id', bid.bidder_id)
+            .single();
+          
+          return {
+            ...bid,
+            bidder: bidderData || { username: 'Anonymous', avatar_url: undefined }
+          };
+        })
+      );
+      
+      setRecentBids(bidsWithProfiles);
+    } catch (error) {
+      console.error('Failed to fetch recent bids:', error);
+    }
+  };
+
   // Fetch recent bids
   useEffect(() => {
-    const fetchRecentBids = async () => {
-      try {
-        // First, get the bids for this capsule
-        const { data: bidsData, error: bidsError } = await supabase
-          .from('bids')
-          .select('id, bidder_id, amount, created_at')
-          .eq('capsule_id', capsule.id)
-          .order('created_at', { ascending: false })
-          .limit(3);
-          
-        if (bidsError) {
-          console.error('Error fetching bids:', bidsError);
-          return;
-        }
-        
-        if (!bidsData || bidsData.length === 0) {
-          setRecentBids([]);
-          return;
-        }
-        
-        // Then, fetch bidder profiles separately for each bid
-        const bidsWithProfiles = await Promise.all(
-          bidsData.map(async (bid) => {
-            const { data: bidderData } = await supabase
-              .from('profiles')
-              .select('username, avatar_url')
-              .eq('id', bid.bidder_id)
-              .single();
-            
-            return {
-              ...bid,
-              bidder: bidderData || { username: 'Anonymous', avatar_url: undefined }
-            };
-          })
-        );
-        
-        setRecentBids(bidsWithProfiles);
-      } catch (error) {
-        console.error('Failed to fetch recent bids:', error);
-      }
-    };
-    
     fetchRecentBids();
   }, [capsule.id]);
 
@@ -106,6 +108,9 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
         title: "Bid accepted!",
         description: "The capsule will be unlocked for the winner.",
       });
+      
+      // Refresh bids list
+      fetchRecentBids();
       
     } catch (error: any) {
       toast({
@@ -210,11 +215,25 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
           </div>
         </CardContent>
         <CardFooter>
-          <Button className="w-full bg-gradient-to-r from-[#00ffe0] to-[#ff00ff] hover:opacity-90 transition-all transform hover:scale-105 text-black font-bold">
+          <Button 
+            className="w-full bg-gradient-to-r from-[#00ffe0] to-[#ff00ff] hover:opacity-90 transition-all transform hover:scale-105 text-black font-bold"
+            onClick={() => setIsBidModalOpen(true)}
+            disabled={isCreator}
+          >
             PLACE BID
           </Button>
         </CardFooter>
       </Card>
+
+      {/* Bid Modal */}
+      {isBidModalOpen && (
+        <PlaceBidModal
+          isOpen={isBidModalOpen}
+          onClose={() => setIsBidModalOpen(false)}
+          capsule={capsule}
+          onBidPlaced={fetchRecentBids}
+        />
+      )}
     </div>
   );
 };

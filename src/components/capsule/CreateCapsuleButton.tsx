@@ -33,7 +33,7 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
     setProcessingPayment(true);
     
     try {
-      // Always simulate a successful payment (skip wallet interaction)
+      // Always simulate a successful payment (skip wallet interaction for demo)
       console.log("Simulating successful payment transaction");
       
       // Wait a short time to simulate processing

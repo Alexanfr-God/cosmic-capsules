@@ -203,3 +203,38 @@ export const getCapsuleContentFromChain = async (capsuleId: string, paymentMetho
     return "";
   }
 };
+
+// Helper function to check and update expired capsules
+export const checkAndUpdateExpiredCapsules = async () => {
+  try {
+    const { data: expiredCapsules, error } = await supabase
+      .from('capsules')
+      .select('id, name')
+      .eq('status', 'closed')
+      .lt('open_date', new Date().toISOString());
+    
+    if (error) {
+      console.error("Error fetching expired capsules:", error);
+      return;
+    }
+    
+    if (expiredCapsules && expiredCapsules.length > 0) {
+      console.log(`Found ${expiredCapsules.length} expired capsules to update`);
+      
+      for (const capsule of expiredCapsules) {
+        const { error: updateError } = await supabase
+          .from('capsules')
+          .update({ status: 'opened' })
+          .eq('id', capsule.id);
+          
+        if (updateError) {
+          console.error(`Error updating capsule ${capsule.id}:`, updateError);
+        } else {
+          console.log(`Updated capsule ${capsule.id} (${capsule.name}) to opened status`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error in checkAndUpdateExpiredCapsules:", error);
+  }
+};

@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import { WagmiConfig } from 'wagmi';
 import { wagmiConfig, Web3ModalComponent } from './lib/web3-config';
 import { AuthProvider } from "./contexts/AuthContext";
+import AuctionNotifications from "./components/bidding/AuctionNotifications";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
+              <AuctionNotifications />
               <BrowserRouter>
                 <Routes>
                   <Route path="/" element={<Index />} />

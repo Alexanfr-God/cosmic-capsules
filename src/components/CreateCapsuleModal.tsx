@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -225,15 +226,6 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
     console.log("Capsule created successfully:", createdCapsule);
     
     return createdCapsule;
-  };
-
-  const handleCreateCapsule = async () => {
-    if (!validateCapsuleData()) {
-      return;
-    }
-
-    setIsLoading(true);
-    // Payment and capsule creation will happen in the CreateCapsuleButton component
   };
 
   return (

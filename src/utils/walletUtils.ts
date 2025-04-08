@@ -6,18 +6,18 @@ import { toast } from "@/hooks/use-toast";
  * Checks if wallet is installed and connected
  */
 export const checkWalletConnection = async (): Promise<boolean> => {
-  // Check if MetaMask or other wallet is installed
-  if (typeof window === "undefined" || typeof window.ethereum === "undefined") {
-    console.log("Wallet not detected");
-    toast({
-      title: "Wallet Not Found",
-      description: "Please install MetaMask or another compatible wallet",
-      variant: "destructive",
-    });
-    return false;
-  }
-
   try {
+    // Check if MetaMask or other wallet is installed
+    if (typeof window === "undefined" || typeof window.ethereum === "undefined") {
+      console.log("Wallet not detected");
+      toast({
+        title: "Wallet Not Found",
+        description: "Please install MetaMask or another compatible wallet",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     // Check if already connected
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const accounts = await provider.listAccounts();
@@ -44,12 +44,22 @@ export const checkWalletConnection = async (): Promise<boolean> => {
       return false;
     }
   } catch (error: any) {
-    console.error("Error connecting to wallet:", error);
-    toast({
-      title: "Wallet Connection Error",
-      description: error.message || "Failed to connect to your wallet",
-      variant: "destructive",
-    });
+    // Handle user rejection of connection request
+    if (error.code === 4001) {
+      console.log("User rejected wallet connection request");
+      toast({
+        title: "Connection Cancelled",
+        description: "You cancelled the wallet connection request",
+        variant: "default",
+      });
+    } else {
+      console.error("Error connecting to wallet:", error);
+      toast({
+        title: "Wallet Connection Error",
+        description: error.message || "Failed to connect to your wallet",
+        variant: "destructive",
+      });
+    }
     return false;
   }
 };
@@ -137,8 +147,12 @@ export const switchToBscNetwork = async (): Promise<boolean> => {
  * Opens wallet connection modal
  */
 export const openWalletModal = () => {
-  // Dispatch event to open Web3Modal
-  const w3mEvent = new Event('w3m-open-modal');
-  document.dispatchEvent(w3mEvent);
-  console.log("Wallet connection modal opened");
+  try {
+    // Dispatch event to open Web3Modal
+    const w3mEvent = new Event('w3m-open-modal');
+    document.dispatchEvent(w3mEvent);
+    console.log("Wallet connection modal opened");
+  } catch (error) {
+    console.error("Error opening wallet modal:", error);
+  }
 };

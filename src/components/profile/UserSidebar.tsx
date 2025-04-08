@@ -31,7 +31,7 @@ const UserSidebar = ({ userProfile, isOwnProfile }: UserSidebarProps) => {
       <div className="flex flex-col items-center text-center space-y-4">
         <div className="relative">
           {isOwnProfile ? (
-            <ProfileImageUpload onEdit={() => setIsEditing(!isEditing)} />
+            <ProfileImageUpload onImageUpdate={() => setIsEditing(!isEditing)} />
           ) : (
             <Avatar className="w-32 h-32 border-4 border-neon-blue/30">
               <AvatarImage src={userProfile?.avatar_url || ''} alt="Profile" />

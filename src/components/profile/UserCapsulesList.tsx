@@ -102,12 +102,12 @@ const UserCapsulesList = ({ userId, isOwnProfile }: UserCapsulesListProps) => {
           </div>
 
           <div className="relative h-full flex flex-col items-center justify-center gap-4 p-6">
-            {!isOwnProfile && (
+            {!isOwnProfile && capsule.creator && (
               <div className="absolute top-3 right-3">
                 <Avatar className="w-8 h-8 border border-neon-blue/30">
-                  <AvatarImage src={capsule.creator?.avatar_url || ''} />
+                  <AvatarImage src={capsule.creator.avatar_url || ''} />
                   <AvatarFallback className="bg-space-dark text-neon-blue text-xs">
-                    {capsule.creator?.username?.slice(0, 2).toUpperCase() || 'UN'}
+                    {capsule.creator.username?.slice(0, 2).toUpperCase() || 'UN'}
                   </AvatarFallback>
                 </Avatar>
               </div>

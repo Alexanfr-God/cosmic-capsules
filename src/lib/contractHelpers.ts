@@ -1,8 +1,8 @@
-
 import { ethers } from 'ethers';
 import { create } from 'ipfs-http-client';
 import { toast } from 'sonner';
 import { Buffer } from 'buffer';
+import { supabase } from '@/integrations/supabase/client';
 
 // IPFS configuration
 // Using Infura IPFS public gateway

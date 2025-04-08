@@ -13,6 +13,9 @@ export type Capsule = {
   current_bid?: number;
   image_url?: string;
   auction_enabled?: boolean;
+  initial_bid?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export const getUserCapsules = async (userId: string): Promise<Capsule[]> => {
@@ -86,5 +89,51 @@ export const getAuctionCapsules = async (limit: number = 10): Promise<Capsule[]>
   } catch (error) {
     console.error('Error in getAuctionCapsules:', error);
     return [];
+  }
+};
+
+export const getAllCapsules = async (): Promise<Capsule[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('capsules')
+      .select(`
+        *,
+        creator:creator_id(id, username, avatar_url)
+      `)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error('Error fetching all capsules:', error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in getAllCapsules:', error);
+    return [];
+  }
+};
+
+export const createCapsule = async (capsuleData: Partial<Capsule>): Promise<Capsule> => {
+  try {
+    const { data, error } = await supabase
+      .from('capsules')
+      .insert(capsuleData)
+      .select()
+      .single();
+      
+    if (error) {
+      console.error('Error creating capsule:', error);
+      throw error;
+    }
+    
+    if (!data) {
+      throw new Error('No data returned from capsule creation');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in createCapsule:', error);
+    throw error;
   }
 };

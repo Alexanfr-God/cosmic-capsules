@@ -40,7 +40,7 @@ const UpcomingCapsules = ({ upcomingCapsules }: UpcomingCapsulesProps) => {
                       style={{
                         width: (() => {
                           const now = new Date();
-                          const created = new Date(capsule.created_at);
+                          const created = new Date(capsule.created_at || Date.now());
                           const opens = new Date(capsule.open_date);
                           const total = opens.getTime() - created.getTime();
                           const elapsed = now.getTime() - created.getTime();

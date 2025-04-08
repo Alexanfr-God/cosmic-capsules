@@ -52,6 +52,19 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
       return null;
     }
 
+    // Ensure the profiles bucket exists
+    const { data: bucketsData } = await supabase.storage.listBuckets();
+    if (!bucketsData?.some(bucket => bucket.name === 'profiles')) {
+      // Create the profiles bucket if it doesn't exist
+      try {
+        await supabase.storage.createBucket('profiles', {
+          public: true
+        });
+      } catch (err) {
+        console.log('Bucket might already exist, continuing...');
+      }
+    }
+
     // Generate a unique filename
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}-${Math.random()}.${fileExt}`;
@@ -59,14 +72,14 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
 
     // Upload to Supabase storage
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from('profiles')
       .upload(filePath, file);
 
     if (uploadError) throw uploadError;
 
     // Get public URL
     const { data } = supabase.storage
-      .from('avatars')
+      .from('profiles')
       .getPublicUrl(filePath);
 
     const publicUrl = data.publicUrl;
@@ -90,6 +103,84 @@ export const uploadAvatar = async (file: File, userId: string): Promise<string |
     toastFunction({
       title: "Upload Failed",
       description: "There was an error uploading your avatar",
+      variant: "destructive"
+    });
+    return null;
+  }
+};
+
+// Upload profile banner
+export const uploadBanner = async (file: File, userId: string): Promise<string | null> => {
+  try {
+    if (!file) {
+      toastFunction({
+        title: "No file selected",
+        description: "Please choose an image to upload",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    if (!userId) {
+      toastFunction({
+        title: "Authentication Error",
+        description: "You must be logged in to upload a banner",
+        variant: "destructive"
+      });
+      return null;
+    }
+
+    // Ensure the profiles bucket exists
+    const { data: bucketsData } = await supabase.storage.listBuckets();
+    if (!bucketsData?.some(bucket => bucket.name === 'profiles')) {
+      // Create the profiles bucket if it doesn't exist
+      try {
+        await supabase.storage.createBucket('profiles', {
+          public: true
+        });
+      } catch (err) {
+        console.log('Bucket might already exist, continuing...');
+      }
+    }
+
+    // Generate a unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `banner-${userId}-${Math.random()}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`;
+
+    // Upload to Supabase storage
+    const { error: uploadError } = await supabase.storage
+      .from('profiles')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    // Get public URL
+    const { data } = supabase.storage
+      .from('profiles')
+      .getPublicUrl(filePath);
+
+    const publicUrl = data.publicUrl;
+
+    // Update profile with new banner URL
+    const { error: profileUpdateError } = await supabase
+      .from('profiles')
+      .update({ banner_url: publicUrl })
+      .eq('id', userId);
+
+    if (profileUpdateError) throw profileUpdateError;
+
+    toastFunction({
+      title: "Banner Updated",
+      description: "Your profile banner has been successfully updated"
+    });
+
+    return publicUrl;
+  } catch (error) {
+    console.error('Error uploading banner:', error);
+    toastFunction({
+      title: "Upload Failed",
+      description: "There was an error uploading your banner",
       variant: "destructive"
     });
     return null;

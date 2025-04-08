@@ -5,6 +5,7 @@ export type UserProfile = {
   id: string;
   username?: string;
   avatar_url?: string;
+  banner_url?: string;
   wallet_address?: string;
 }
 

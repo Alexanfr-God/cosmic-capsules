@@ -35,7 +35,7 @@ const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
             <div className="flex justify-between items-center">
               <span className="text-white/80">Current Bid:</span>
               <span className="text-neon-pink font-bold animate-pulse">
-                {capsule.current_bid || 0.1} BNB
+                {capsule.current_bid || (capsule.initial_bid ?? 0.1)} BNB
               </span>
             </div>
             <div className="flex justify-between items-center">

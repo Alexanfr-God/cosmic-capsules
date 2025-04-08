@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +15,7 @@ import CapsulePaymentMethod from "./capsule/CapsulePaymentMethod";
 import CapsuleAuctionToggle from "./capsule/CapsuleAuctionToggle";
 import CreateCapsuleButton from "./capsule/CreateCapsuleButton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { ExclamationTriangleIcon } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 interface CreateCapsuleModalProps {
   isOpen: boolean;
@@ -248,7 +247,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
 
         {error && (
           <Alert variant="destructive" className="bg-red-900/50 border-red-500 text-white">
-            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>

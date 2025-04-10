@@ -41,9 +41,28 @@ const Auctions = () => {
           throw new Error(response.error.message);
         }
         
-        // Filter only auction_enabled capsules
+        // Filter only auction_enabled capsules and transform the data
         const auctionCapsules = response.data?.filter(capsule => capsule.auction_enabled) || [];
-        setAuctions(auctionCapsules);
+        
+        // Transform the data to ensure it matches the Capsule type
+        const transformedCapsules: Capsule[] = auctionCapsules.map(item => {
+          // Ensure the creator has the expected shape of UserProfile
+          let creator = null;
+          if (item.creator && typeof item.creator === 'object') {
+            creator = {
+              id: item.creator_id, // Use creator_id as the id
+              username: item.creator.username,
+              avatar_url: item.creator.avatar_url
+            };
+          }
+          
+          return {
+            ...item,
+            creator
+          };
+        });
+        
+        setAuctions(transformedCapsules);
       } catch (err: any) {
         console.error("Error fetching auctions:", err);
         setError(err.message || "Failed to load auctions");

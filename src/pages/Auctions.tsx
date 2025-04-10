@@ -48,11 +48,11 @@ const Auctions = () => {
         const transformedCapsules: Capsule[] = auctionCapsules.map(item => {
           // Ensure the creator has the expected shape of UserProfile
           let creator = null;
-          if (item.creator && typeof item.creator === 'object') {
+          if (item.creator && typeof item.creator === 'object' && item.creator !== null) {
             creator = {
               id: item.creator_id, // Use creator_id as the id
-              username: item.creator.username,
-              avatar_url: item.creator.avatar_url
+              username: item.creator?.username || "Anonymous",
+              avatar_url: item.creator?.avatar_url || undefined
             };
           }
           

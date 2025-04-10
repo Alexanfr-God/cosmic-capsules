@@ -51,8 +51,8 @@ const Auctions = () => {
           if (item.creator && typeof item.creator === 'object' && item.creator !== null) {
             creator = {
               id: item.creator_id, // Use creator_id as the id
-              username: item.creator?.username || "Anonymous",
-              avatar_url: item.creator?.avatar_url || undefined
+              username: item.creator.username || "Anonymous",
+              avatar_url: item.creator.avatar_url || undefined
             };
           }
           

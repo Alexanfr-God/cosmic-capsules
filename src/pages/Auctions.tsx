@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
@@ -9,6 +8,7 @@ import { Clock, Loader2, AlertCircle } from "lucide-react";
 import AuctionCard from "@/components/home/AuctionCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { Helmet } from "react-helmet";
+import { Capsule } from "@/services/capsuleService";
 
 const Auctions = () => {
   const [auctions, setAuctions] = useState<any[]>([]);
@@ -21,10 +21,6 @@ const Auctions = () => {
     const fetchAuctions = async () => {
       try {
         setLoading(true);
-        // This is a placeholder for future Supabase integration
-        // In a real implementation, we would fetch data from Supabase like this:
-        // const { data, error } = await supabase.from('capsules').select('*').eq('auction_enabled', true);
-        // For now, we'll use the capsuleService to get all capsules
         const response = await supabase.from('capsules').select(`
           *,
           creator:creator_id(username, avatar_url)
@@ -34,25 +30,21 @@ const Auctions = () => {
           throw new Error(response.error.message);
         }
 
-        // Filter only auction_enabled capsules and transform the data
         const auctionCapsules = response.data?.filter((capsule) => capsule.auction_enabled) || [];
 
-        // Transform the data to ensure it matches the Capsule type
-        const transformedCapsules = auctionCapsules.map((item) => {
-          // Ensure the creator has the expected shape of UserProfile
-          let creator = null;
-          if (item.creator && typeof item.creator === 'object') {
-            creator = {
-              id: item.creator_id,
-              username: item.creator.username || "Anonymous", // Use optional chaining and nullish coalescing
-              avatar_url: item.creator.avatar_url || undefined // Use optional chaining
-            };
-          }
+        const transformedCapsules: Capsule[] = auctionCapsules.map((item) => {
+          const creator = item.creator && typeof item.creator === 'object' 
+            ? {
+                id: item.creator_id,
+                username: (item.creator as any)?.username || "Anonymous", 
+                avatar_url: (item.creator as any)?.avatar_url || undefined
+              }
+            : null;
 
           return {
             ...item,
             creator
-          };
+          } as Capsule;
         });
 
         setAuctions(transformedCapsules);

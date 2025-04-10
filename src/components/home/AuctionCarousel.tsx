@@ -103,7 +103,7 @@ const AuctionCarousel = ({ auctionCapsules }: AuctionCarouselProps) => {
           <Button 
             variant="outline" 
             className="rounded-full border-neon-blue text-neon-blue hover:bg-neon-blue/20 transition-all transform hover:scale-105"
-            onClick={() => navigate("/auctions")}
+            onClick={() => navigate("/profile")}
           >
             VIEW ALL AUCTIONS
             <ArrowRight className="ml-2 w-4 h-4" />

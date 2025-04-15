@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
@@ -7,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Clock, Loader2, AlertCircle } from "lucide-react";
 import AuctionCard from "@/components/home/AuctionCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { Helmet } from "react-helmet-async"; // Updated import
+import { Helmet } from "react-helmet-async";
+import { Capsule } from "@/services/capsuleService";
 
 const Auctions = () => {
-  const [auctions, setAuctions] = useState([]);
+  const [auctions, setAuctions] = useState<Capsule[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const { user } = useAuth();
 
@@ -34,11 +36,14 @@ const Auctions = () => {
 
         const auctionCapsules = response.data?.filter((capsule) => capsule.auction_enabled) || [];
 
+        // Fix the TypeScript error by properly handling the null case
         const transformedCapsules = auctionCapsules.map((item) => {
+          // Make sure we handle the case where item.creator could be null
           const creator = item.creator && typeof item.creator === 'object' ? {
             id: item.creator_id,
-            username: item.creator?.username || "Anonymous",
-            avatar_url: item.creator?.avatar_url || undefined
+            // Use optional chaining to safely access properties
+            username: item.creator.username || "Anonymous",
+            avatar_url: item.creator.avatar_url || undefined
           } : null;
 
           return {

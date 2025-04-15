@@ -15,8 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Rocket, AlertCircle } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ensureStorageBucketExists } from "@/utils/storageUtils";
-import { checkAndUpdateExpiredCapsules } from "@/lib/contractHelpers";
-import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const { user } = useAuth();
@@ -33,9 +31,6 @@ const Index = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Check and update any expired capsules
-      await checkAndUpdateExpiredCapsules();
       
       const data = await getAllCapsules();
       
@@ -70,29 +65,6 @@ const Index = () => {
     }
   }, []);
 
-  // Set up realtime subscription for bids
-  useEffect(() => {
-    const channel = supabase
-      .channel('capsule-updates')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'bids' 
-        }, 
-        () => {
-          // Refresh capsules when bids are added, updated, or deleted
-          console.log('Bid activity detected, refreshing capsules');
-          fetchCapsules();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchCapsules]);
-
   useEffect(() => {
     setMounted(true);
     fetchCapsules();
@@ -103,13 +75,6 @@ const Index = () => {
     };
     
     checkStorageBucket();
-    
-    // Periodically check for expired capsules
-    const interval = setInterval(() => {
-      checkAndUpdateExpiredCapsules();
-    }, 60000); // Check every minute
-    
-    return () => clearInterval(interval);
   }, [fetchCapsules]);
 
   const handleCreateCapsuleClose = () => {

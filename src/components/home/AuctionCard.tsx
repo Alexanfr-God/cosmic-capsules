@@ -1,38 +1,18 @@
 
-import React, { useState, useEffect } from "react";
-import { Clock, Calendar, DollarSign, Check } from "lucide-react";
+import React from "react";
+import { Clock, Calendar, DollarSign } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Capsule } from "@/services/capsuleService";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import PlaceBidModal from "../bidding/PlaceBidModal";
-
-interface Bid {
-  id: string;
-  bidder_id: string;
-  amount: number;
-  created_at: string;
-  bidder?: {
-    username?: string;
-    avatar_url?: string;
-  };
-}
 
 interface AuctionCardProps {
   capsule: Capsule;
   index: number;
   currentSlide: number;
-  isCreator: boolean;
 }
 
-const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardProps) => {
-  const [recentBids, setRecentBids] = useState<Bid[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isBidModalOpen, setIsBidModalOpen] = useState(false);
-  const { toast } = useToast();
-  
+const AuctionCard = ({ capsule, index, currentSlide }: AuctionCardProps) => {
   // Calculate time remaining
   const timeLeft = () => {
     const now = new Date();
@@ -40,87 +20,6 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
     const diffTime = Math.abs(openDate.getTime() - now.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} days`;
-  };
-
-  const fetchRecentBids = async () => {
-    try {
-      // First, get the bids for this capsule
-      const { data: bidsData, error: bidsError } = await supabase
-        .from('bids')
-        .select('id, bidder_id, amount, created_at')
-        .eq('capsule_id', capsule.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-        
-      if (bidsError) {
-        console.error('Error fetching bids:', bidsError);
-        return;
-      }
-      
-      if (!bidsData || bidsData.length === 0) {
-        setRecentBids([]);
-        return;
-      }
-      
-      // Then, fetch bidder profiles separately for each bid
-      const bidsWithProfiles = await Promise.all(
-        bidsData.map(async (bid) => {
-          const { data: bidderData } = await supabase
-            .from('profiles')
-            .select('username, avatar_url')
-            .eq('id', bid.bidder_id)
-            .single();
-          
-          return {
-            ...bid,
-            bidder: bidderData || { username: 'Anonymous', avatar_url: undefined }
-          };
-        })
-      );
-      
-      setRecentBids(bidsWithProfiles);
-    } catch (error) {
-      console.error('Failed to fetch recent bids:', error);
-    }
-  };
-
-  // Fetch recent bids
-  useEffect(() => {
-    fetchRecentBids();
-  }, [capsule.id]);
-
-  // Handle accepting bid
-  const handleAcceptBid = async (bidId: string) => {
-    if (!isCreator) return;
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase
-        .from('bids')
-        .update({ is_accepted: true })
-        .eq('id', bidId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      toast({
-        title: "Bid accepted!",
-        description: "The capsule will be unlocked for the winner.",
-      });
-      
-      // Refresh bids list
-      fetchRecentBids();
-      
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept bid",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -146,11 +45,6 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
           </div>
           <CardDescription className="text-white/60 font-['Syne',_sans-serif]">
             by @{capsule.creator?.username || "Anonymous"}
-            {isCreator && (
-              <span className="ml-2 bg-neon-pink/20 text-neon-pink text-xs px-2 py-0.5 rounded-full">
-                Your capsule
-              </span>
-            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -171,69 +65,14 @@ const AuctionCard = ({ capsule, index, currentSlide, isCreator }: AuctionCardPro
                 Ξ{capsule.current_bid || (capsule.initial_bid ?? 0.1)}
               </span>
             </div>
-            
-            {/* Recent bids section */}
-            <div className="mt-4 border-t border-white/10 pt-3">
-              <h4 className="text-white/80 text-sm mb-2">Last bids:</h4>
-              {recentBids.length > 0 ? (
-                <div className="space-y-2">
-                  {recentBids.map((bid) => (
-                    <div key={bid.id} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={bid.bidder?.avatar_url || undefined} />
-                          <AvatarFallback className="bg-[#302b63] text-[#00ffe0] text-xs">
-                            {bid.bidder?.username?.charAt(0) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-white/70 text-xs">
-                          @{bid.bidder?.username || "Anonymous"}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-[#00ffe0] text-xs font-medium">
-                          Ξ{bid.amount}
-                        </span>
-                        {isCreator && (
-                          <Button 
-                            size="sm" 
-                            className="h-6 px-2 text-xs bg-neon-pink hover:bg-neon-pink/80"
-                            onClick={() => handleAcceptBid(bid.id)}
-                            disabled={loading}
-                          >
-                            <Check className="h-3 w-3 mr-1" /> Accept
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-white/40 text-xs text-center py-2">No bids yet</p>
-              )}
-            </div>
           </div>
         </CardContent>
         <CardFooter>
-          <Button 
-            className="w-full bg-gradient-to-r from-[#00ffe0] to-[#ff00ff] hover:opacity-90 transition-all transform hover:scale-105 text-black font-bold"
-            onClick={() => setIsBidModalOpen(true)}
-            disabled={isCreator}
-          >
+          <Button className="w-full bg-gradient-to-r from-[#00ffe0] to-[#ff00ff] hover:opacity-90 transition-all transform hover:scale-105 text-black font-bold">
             PLACE BID
           </Button>
         </CardFooter>
       </Card>
-
-      {/* Bid Modal */}
-      {isBidModalOpen && (
-        <PlaceBidModal
-          isOpen={isBidModalOpen}
-          onClose={() => setIsBidModalOpen(false)}
-          capsule={capsule}
-          onBidPlaced={fetchRecentBids}
-        />
-      )}
     </div>
   );
 };

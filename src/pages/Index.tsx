@@ -12,11 +12,13 @@ import UpcomingCapsules from "@/components/home/UpcomingCapsules";
 import Testimonials from "@/components/home/Testimonials";
 import CreateCapsuleModal from "@/components/CreateCapsuleModal";
 import { Button } from "@/components/ui/button";
-import { Rocket, AlertCircle } from "lucide-react";
+import { Rocket, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { ensureStorageBucketExists } from "@/utils/storageUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
+  const { toast } = useToast();
   const { user } = useAuth();
   const { isConnected, address } = useAccount();
   const [mounted, setMounted] = useState(false);
@@ -26,6 +28,7 @@ const Index = () => {
   const [auctionCapsules, setAuctionCapsules] = useState<Capsule[]>([]);
   const [upcomingCapsules, setUpcomingCapsules] = useState<Capsule[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [justCreatedCapsule, setJustCreatedCapsule] = useState<Capsule | null>(null);
 
   const fetchCapsules = useCallback(async () => {
     try {
@@ -77,10 +80,45 @@ const Index = () => {
     checkStorageBucket();
   }, [fetchCapsules]);
 
+  // Function to handle when a capsule is successfully created
+  const handleCapsuleCreated = (newCapsule: Capsule) => {
+    console.log("New capsule created:", newCapsule);
+    
+    // Show success message
+    toast({
+      title: "Capsule Created!",
+      description: "Your time capsule has been successfully created and stored.",
+      variant: "default",
+    });
+    
+    // Set the newly created capsule to trigger animation
+    setJustCreatedCapsule(newCapsule);
+    
+    // Update the lists of capsules
+    if (newCapsule.auction_enabled) {
+      setAuctionCapsules(prev => [newCapsule, ...prev].slice(0, 6));
+    }
+    
+    const openDate = new Date(newCapsule.open_date);
+    const now = new Date();
+    const oneWeekFromNow = new Date(now);
+    oneWeekFromNow.setDate(oneWeekFromNow.getDate() + 7);
+    
+    if (openDate > now && openDate <= oneWeekFromNow) {
+      setUpcomingCapsules(prev => [newCapsule, ...prev].slice(0, 4));
+    }
+    
+    // Update the full list of capsules
+    setCapsules(prev => [newCapsule, ...prev]);
+    
+    // Clear the animation trigger after a delay
+    setTimeout(() => {
+      setJustCreatedCapsule(null);
+    }, 5000);
+  };
+
   const handleCreateCapsuleClose = () => {
     setIsCreateModalOpen(false);
-    // Refresh the capsule list when the modal closes
-    fetchCapsules();
   };
 
   if (!mounted) return null;
@@ -89,6 +127,19 @@ const Index = () => {
     <div className="min-h-screen bg-space-gradient text-white overflow-x-hidden">
       <Header />
       <Hero />
+      
+      {/* Success message when a capsule is created */}
+      {justCreatedCapsule && (
+        <div className="container mx-auto px-4 py-4 animate-fade-in">
+          <Alert className="bg-green-900/50 border-green-500 text-white">
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>Capsule Created!</AlertTitle>
+            <AlertDescription>
+              Your capsule "{justCreatedCapsule.name}" has been successfully created.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
       
       {/* Error message if capsules failed to load */}
       {error && (
@@ -121,6 +172,7 @@ const Index = () => {
       <CreateCapsuleModal 
         isOpen={isCreateModalOpen} 
         onClose={handleCreateCapsuleClose} 
+        onCapsuleCreated={handleCapsuleCreated}
       />
     </div>
   );

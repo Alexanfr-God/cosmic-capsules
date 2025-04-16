@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAccount } from "wagmi";
-import { createCapsule } from "@/services/capsuleService";
+import { createCapsule, Capsule } from "@/services/capsuleService";
 import { uploadFileToBucket } from "@/utils/storageUtils";
 import { createProfileIfNotExists } from "@/services/profileService";
 
@@ -192,7 +192,7 @@ export const useCapsuleCreation = () => {
     selectedDate: Date | undefined,
     selectedImage: File | null,
     auctionEnabled: boolean,
-    onSuccess: () => void,
+    onSuccess: (capsule?: Capsule) => void, // Updated to receive the capsule
     onError: (error: string) => void,
     txHash?: string
   ) => {
@@ -206,7 +206,7 @@ export const useCapsuleCreation = () => {
     
     try {
       // Create the capsule in the database after successful payment
-      await createCapsuleInDatabase(
+      const newCapsule = await createCapsuleInDatabase(
         capsuleName,
         message,
         selectedDate,
@@ -220,7 +220,8 @@ export const useCapsuleCreation = () => {
         description: "Your time capsule has been created successfully.",
       });
 
-      onSuccess();
+      // Pass the new capsule to the success callback
+      onSuccess(newCapsule);
     } catch (error: any) {
       console.error("Error creating capsule:", error);
       onError(error.message || "Capsule creation failed");

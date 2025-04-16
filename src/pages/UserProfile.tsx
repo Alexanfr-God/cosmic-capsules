@@ -12,6 +12,7 @@ import UserCapsulesList from "@/components/profile/UserCapsulesList";
 import ProfileBanner from "@/components/profile/ProfileBanner";
 import UserDMPanel from "@/components/profile/UserDMPanel";
 import { WalletConnect } from "@/components/WalletConnect";
+import { Capsule } from "@/services/capsuleService";
 
 const UserProfile = () => {
   const { userId } = useParams();
@@ -21,10 +22,39 @@ const UserProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [profileData, setProfileData] = useState<UserProfileType | null>(null);
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
+  const [newCapsule, setNewCapsule] = useState<Capsule | null>(null);
   
   const isOwnProfile = (!userId && !!user) || userId === user?.id;
   const displayedProfile = isOwnProfile ? userProfile : profileData;
   const profileId = userId || user?.id;
+
+  // Listen for newly created capsules from localStorage
+  useEffect(() => {
+    const checkForNewCapsule = () => {
+      const storedCapsule = localStorage.getItem('newlyCreatedCapsule');
+      if (storedCapsule) {
+        try {
+          const capsuleData = JSON.parse(storedCapsule);
+          if (capsuleData && capsuleData.creator_id === profileId) {
+            setNewCapsule(capsuleData);
+            // Remove from localStorage after processing
+            localStorage.removeItem('newlyCreatedCapsule');
+          }
+        } catch (error) {
+          console.error("Error parsing new capsule data:", error);
+        }
+      }
+    };
+    
+    checkForNewCapsule();
+    
+    // Set up event listener for storage changes
+    window.addEventListener('storage', checkForNewCapsule);
+    
+    return () => {
+      window.removeEventListener('storage', checkForNewCapsule);
+    };
+  }, [profileId]);
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -155,6 +185,7 @@ const UserProfile = () => {
               <UserCapsulesList 
                 userId={profileId || ''} 
                 isOwnProfile={isOwnProfile}
+                newCapsule={newCapsule}
               />
             </div>
           </div>

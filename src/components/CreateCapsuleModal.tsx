@@ -20,9 +20,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface CreateCapsuleModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onCapsuleCreated?: (capsule: any) => void; // New callback prop for when capsule is created
 }
 
-const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
+const CreateCapsuleModal = ({ isOpen, onClose, onCapsuleCreated }: CreateCapsuleModalProps) => {
   const { user, refreshUserProfile } = useAuth();
   const [capsuleName, setCapsuleName] = useState("");
   const [message, setMessage] = useState("");
@@ -148,6 +149,7 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
       setIsLoading(true);
       setError(null);
       
+      // Updated to receive the newly created capsule
       await handlePaymentComplete(
         success, 
         capsuleName, 
@@ -155,9 +157,13 @@ const CreateCapsuleModal = ({ isOpen, onClose }: CreateCapsuleModalProps) => {
         selectedDate, 
         selectedImage, 
         auctionEnabled,
-        () => {
+        (newCapsule) => {
           console.log("Capsule creation succeeded, resetting form and closing modal");
           resetForm();
+          // Call onCapsuleCreated with the new capsule if provided
+          if (onCapsuleCreated && newCapsule) {
+            onCapsuleCreated(newCapsule);
+          }
           onClose();
         },
         (errorMessage: string) => {

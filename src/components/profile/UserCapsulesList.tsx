@@ -4,17 +4,18 @@ import { Link } from "react-router-dom";
 import { Timer, DollarSign } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { getUserCapsules } from "@/services/capsuleService";
-import { Capsule } from "@/services/capsuleService";
+import { getUserCapsules, Capsule } from "@/services/capsuleService";
 
 interface UserCapsulesListProps {
   userId: string;
   isOwnProfile: boolean;
+  newCapsule?: Capsule | null;
 }
 
-const UserCapsulesList = ({ userId, isOwnProfile }: UserCapsulesListProps) => {
+const UserCapsulesList = ({ userId, isOwnProfile, newCapsule }: UserCapsulesListProps) => {
   const [capsules, setCapsules] = useState<Capsule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [justAddedCapsuleId, setJustAddedCapsuleId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCapsules = async () => {
@@ -33,6 +34,22 @@ const UserCapsulesList = ({ userId, isOwnProfile }: UserCapsulesListProps) => {
 
     fetchCapsules();
   }, [userId]);
+  
+  // Handle new capsule being added
+  useEffect(() => {
+    if (newCapsule && newCapsule.creator_id === userId) {
+      // Check if the capsule is already in the list
+      if (!capsules.some(c => c.id === newCapsule.id)) {
+        setCapsules(prev => [newCapsule, ...prev]);
+        setJustAddedCapsuleId(newCapsule.id);
+        
+        // Clear the highlight after animation completes
+        setTimeout(() => {
+          setJustAddedCapsuleId(null);
+        }, 3000);
+      }
+    }
+  }, [newCapsule, userId, capsules]);
 
   const getTimeRemaining = (openDate: string) => {
     const now = new Date();
@@ -91,9 +108,13 @@ const UserCapsulesList = ({ userId, isOwnProfile }: UserCapsulesListProps) => {
       {capsules.map((capsule) => (
         <div
           key={capsule.id}
-          className="relative min-h-[280px] group perspective-1000"
+          className={`relative min-h-[280px] group perspective-1000 ${
+            justAddedCapsuleId === capsule.id ? 'animate-scale-in' : ''
+          }`}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-neon-blue/10 to-transparent rounded-[20px] backdrop-blur-md border border-neon-blue/20 overflow-hidden transition-all duration-300 hover:border-neon-blue/40">
+          <div className={`absolute inset-0 bg-gradient-to-b from-neon-blue/10 to-transparent rounded-[20px] backdrop-blur-md border border-neon-blue/20 overflow-hidden transition-all duration-300 hover:border-neon-blue/40 ${
+            justAddedCapsuleId === capsule.id ? 'border-neon-green shadow-lg shadow-neon-green/20' : ''
+          }`}>
             <div className="absolute inset-0 bg-gradient-to-t from-neon-green/10 to-transparent opacity-50" />
             
             <div className="absolute inset-x-0 top-1/4 h-px bg-gradient-to-r from-transparent via-neon-blue/30 to-transparent" />
@@ -110,6 +131,12 @@ const UserCapsulesList = ({ userId, isOwnProfile }: UserCapsulesListProps) => {
                     {capsule.creator.username?.slice(0, 2).toUpperCase() || 'UN'}
                   </AvatarFallback>
                 </Avatar>
+              </div>
+            )}
+            
+            {justAddedCapsuleId === capsule.id && (
+              <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-neon-green text-space-dark text-xs px-2 py-0.5 rounded-full animate-bounce">
+                New!
               </div>
             )}
             

@@ -70,6 +70,17 @@ export const checkWalletConnection = async (): Promise<boolean> => {
 export const switchToBscNetwork = async (): Promise<boolean> => {
   try {
     console.log("Checking network...");
+    
+    // Check if ethereum is available
+    if (typeof window === "undefined" || typeof window.ethereum === "undefined") {
+      toast({
+        title: "Wallet Not Found",
+        description: "Please install MetaMask or another compatible wallet",
+        variant: "destructive",
+      });
+      return false;
+    }
+    
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const network = await provider.getNetwork();
     console.log("Current network:", network);

@@ -13,6 +13,11 @@ export const sendPaymentTransaction = async (
   amount: string
 ): Promise<ethers.providers.TransactionReceipt | null> => {
   try {
+    // Make sure ethereum is available
+    if (typeof window === "undefined" || typeof window.ethereum === "undefined") {
+      throw new Error("Ethereum provider not found. Please install a wallet like MetaMask.");
+    }
+
     // Get the provider and signer
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
@@ -61,11 +66,22 @@ export const sendPaymentTransaction = async (
     }
   } catch (error: any) {
     console.error("Transaction error:", error);
-    toast({
-      title: "Transaction Error",
-      description: error.message || "An error occurred processing the transaction",
-      variant: "destructive",
-    });
+    
+    // User rejected transaction
+    if (error.code === 4001) {
+      toast({
+        title: "Transaction Cancelled",
+        description: "You cancelled the transaction",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Transaction Error",
+        description: error.message || "An error occurred processing the transaction",
+        variant: "destructive",
+      });
+    }
+    
     return null;
   }
 };
@@ -80,17 +96,17 @@ export const sendPaymentTransaction = async (
 export const handleCapsuleCreationTransaction = async (
   recipientAddress: string,
   amount: string,
-  onSuccess: () => void
+  onSuccess: (txHash: string) => void
 ): Promise<boolean> => {
   try {
     console.log("Starting capsule creation transaction process");
     // Send payment transaction
     const receipt = await sendPaymentTransaction(recipientAddress, amount);
     
-    // If payment was successful, call the success callback
-    if (receipt) {
+    // If payment was successful, call the success callback with transaction hash
+    if (receipt && receipt.transactionHash) {
       console.log("Payment successful, creating capsule...");
-      onSuccess();
+      onSuccess(receipt.transactionHash);
       return true;
     }
     

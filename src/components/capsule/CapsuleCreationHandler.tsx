@@ -39,6 +39,36 @@ export const useCapsuleCreation = () => {
       return false;
     }
 
+    // Validate date is in the future
+    if (selectedDate < new Date()) {
+      toast({
+        title: "Error",
+        description: "Unlock date must be in the future",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Check if wallet is connected when needed for payment
+    if (!isConnected) {
+      toast({
+        title: "Error",
+        description: "Please connect your wallet to create a capsule",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    // Make sure user has a profile
+    if (!userProfile) {
+      toast({
+        title: "Error",
+        description: "User profile not found. Please try refreshing the page.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     return validateCapsuleData(userProfile, isConnected, capsuleName, selectedDate);
   };
 
@@ -54,6 +84,11 @@ export const useCapsuleCreation = () => {
     txHash?: string
   ) => {
     if (!user?.id) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to create a capsule",
+        variant: "destructive",
+      });
       onError("User not authenticated");
       return;
     }
@@ -80,6 +115,11 @@ export const useCapsuleCreation = () => {
       });
     } catch (error: any) {
       console.error("Error in payment completion wrapper:", error);
+      toast({
+        title: "Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
       onError(error.message || "An unexpected error occurred");
     } finally {
       setIsLoading(false);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
@@ -34,12 +33,10 @@ const Auctions = () => {
         const auctionCapsules = response.data?.filter(capsule => capsule.auction_enabled) || [];
         
         const transformedCapsules = auctionCapsules.map(item => {
-          // Safely handle creator which might be null
-          const creator = item.creator && typeof item.creator === 'object' ? {
+          const creator = item.creator ? {
             id: item.creator_id,
-            // Use optional chaining and provide fallback values
-            username: item.creator?.username ?? "Anonymous",
-            avatar_url: item.creator?.avatar_url ?? null
+            username: item.creator.username ?? "Anonymous",
+            avatar_url: item.creator.avatar_url ?? null
           } : null;
           
           return {
@@ -78,7 +75,6 @@ const Auctions = () => {
             LIVE AUCTIONS
           </h1>
           
-          {/* Filter Buttons */}
           <div className="flex justify-center space-x-4 mb-8">
             <Button 
               onClick={() => setFilter("all")}
@@ -100,7 +96,6 @@ const Auctions = () => {
             </Button>
           </div>
           
-          {/* Loading State */}
           {loading && (
             <div className="flex justify-center items-center h-48">
               <Loader2 className="w-6 h-6 animate-spin" />
@@ -108,7 +103,6 @@ const Auctions = () => {
             </div>
           )}
           
-          {/* Error State */}
           {error && (
             <div className="text-center text-red-500 py-8">
               <AlertCircle className="w-6 h-6 inline-block mr-2" />
@@ -116,7 +110,6 @@ const Auctions = () => {
             </div>
           )}
           
-          {/* Auction Grid */}
           {!loading && !error && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredAuctions.map((capsule, index) => (
@@ -125,7 +118,6 @@ const Auctions = () => {
             </div>
           )}
           
-          {/* Empty State */}
           {!loading && !error && filteredAuctions.length === 0 && (
             <div className="text-center py-8">
               <p className="text-white/60">No auctions found with the current filter.</p>

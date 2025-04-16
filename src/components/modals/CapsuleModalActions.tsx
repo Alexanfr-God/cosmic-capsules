@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useCapsuleModal } from "./CapsuleModalContext";
 import CreateCapsuleButton from "../capsule/CreateCapsuleButton";
@@ -6,6 +5,7 @@ import { useCapsuleCreation } from "../capsule/CapsuleCreationHandler";
 import { useAuth } from "@/contexts/AuthContext";
 import { Capsule } from "@/services/capsuleService";
 import { ensureStorageBucketExists } from "@/utils/storageUtils";
+import { validateCapsuleData } from "@/utils/capsuleValidation";
 
 interface CapsuleModalActionsProps {
   onCapsuleCreated?: (capsule: Capsule) => void;

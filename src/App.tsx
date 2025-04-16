@@ -4,9 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import Index from "./pages/Index";
 import UserProfile from "./pages/UserProfile";
 import NotFound from "./pages/NotFound";
+import Auctions from "./pages/Auctions";
 import { WagmiConfig } from 'wagmi';
 import { wagmiConfig, Web3ModalComponent } from './lib/web3-config';
 import { AuthProvider } from "./contexts/AuthContext";
@@ -19,17 +21,20 @@ const App = () => {
       <WagmiConfig config={wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/profile" element={<UserProfile />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
+            <HelmetProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/auctions" element={<Auctions />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </HelmetProvider>
           </AuthProvider>
         </QueryClientProvider>
       </WagmiConfig>

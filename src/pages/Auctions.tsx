@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
@@ -36,8 +37,9 @@ const Auctions = () => {
           // Safely handle creator which might be null
           const creator = item.creator && typeof item.creator === 'object' ? {
             id: item.creator_id,
-            username: item.creator?.username || "Anonymous",
-            avatar_url: item.creator?.avatar_url || null
+            // Use optional chaining and provide fallback values
+            username: item.creator?.username ?? "Anonymous",
+            avatar_url: item.creator?.avatar_url ?? null
           } : null;
           
           return {

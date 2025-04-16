@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/layout/Header";
@@ -33,11 +34,19 @@ const Auctions = () => {
         const auctionCapsules = response.data?.filter(capsule => capsule.auction_enabled) || [];
         
         const transformedCapsules = auctionCapsules.map(item => {
-          const creator = item.creator ? {
-            id: item.creator_id,
-            username: item.creator.username ?? "Anonymous",
-            avatar_url: item.creator.avatar_url ?? null
-          } : null;
+          // Use type assertion to handle the creator object properly
+          type CreatorType = { username: string | null; avatar_url: string | null };
+          
+          let creator = null;
+          if (item.creator && typeof item.creator === 'object') {
+            // Using type assertion to avoid TypeScript error
+            const creatorData = item.creator as unknown as CreatorType;
+            creator = {
+              id: item.creator_id,
+              username: creatorData.username || "Anonymous",
+              avatar_url: creatorData.avatar_url
+            };
+          }
           
           return {
             ...item,

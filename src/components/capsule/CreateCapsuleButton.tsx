@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAccount } from "wagmi";
+import { checkWalletConnection, switchToBscNetwork } from "@/utils/walletUtils";
+import { sendPaymentTransaction } from "@/utils/transactionUtils";
 
 interface CreateCapsuleButtonProps {
   isLoading: boolean;
@@ -33,31 +35,64 @@ const CreateCapsuleButton = ({ isLoading, onClick, paymentAmount, paymentMethod 
     setProcessingPayment(true);
     
     try {
-      // Always simulate a successful payment (skip wallet interaction)
-      console.log("Simulating successful payment transaction");
+      // Check if wallet is connected
+      const walletConnected = await checkWalletConnection();
+      if (!walletConnected) {
+        setProcessingPayment(false);
+        toast({
+          title: "Wallet Not Connected",
+          description: "Please connect your wallet to proceed with payment.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Switch to correct network if needed (for BNB payments)
+      if (paymentMethod === 0) {
+        const networkSwitched = await switchToBscNetwork();
+        if (!networkSwitched) {
+          setProcessingPayment(false);
+          toast({
+            title: "Network Error",
+            description: "Please switch to Binance Smart Chain to pay with BNB.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
       
-      // Wait a short time to simulate processing
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Send the transaction
       toast({
-        title: "Payment Simulation",
-        description: `Your payment of ${amount} ${currency} has been simulated successfully`,
+        title: "Payment Processing",
+        description: `Please confirm the transaction in your wallet for ${amount} ${currency}.`,
       });
       
-      // Simulate transaction hash
-      const mockTxHash = "0x" + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-      console.log("Mock transaction hash:", mockTxHash);
+      const receipt = await sendPaymentTransaction(RECIPIENT_ADDRESS, amount);
       
-      // Call the onClick callback to continue with capsule creation
-      // Set a short timeout to ensure UI updates before continuing
-      setTimeout(() => {
-        onClick(true, mockTxHash);
-      }, 100);
+      if (receipt) {
+        console.log("Transaction successful, receipt:", receipt);
+        toast({
+          title: "Payment Successful",
+          description: `Your payment of ${amount} ${currency} has been confirmed.`,
+        });
+        
+        // Call the onClick callback with success and transaction hash
+        onClick(true, receipt.transactionHash);
+      } else {
+        console.error("Transaction failed or was rejected");
+        toast({
+          title: "Payment Failed",
+          description: "The transaction was not completed. Please try again.",
+          variant: "destructive",
+        });
+        
+        onClick(false);
+      }
     } catch (error: any) {
-      console.error("Simulated error:", error);
+      console.error("Payment error:", error);
       toast({
-        title: "Simulation Error",
-        description: "Simulated payment error",
+        title: "Payment Error",
+        description: error.message || "An error occurred during payment processing.",
         variant: "destructive",
       });
       onClick(false);

@@ -1,5 +1,4 @@
 
-import { useToast } from "@/hooks/use-toast";
 import { createCapsuleInDatabase, CapsuleCreationData } from "./capsuleCreationService";
 
 export interface PaymentCompletionParams {
@@ -27,11 +26,17 @@ export const handlePaymentComplete = async ({
   onError,
   txHash
 }: PaymentCompletionParams): Promise<void> => {
-  const { toast } = useToast();
   console.log("Payment completed with success:", success, "Transaction hash:", txHash);
   
   if (!success) {
     onError("Payment failed. Please try again.");
+    return;
+  }
+  
+  // Validate that we have a transaction hash for successful payments
+  if (!txHash) {
+    console.error("Missing transaction hash for successful payment");
+    onError("Payment verification failed. Missing transaction details.");
     return;
   }
   
@@ -47,20 +52,12 @@ export const handlePaymentComplete = async ({
       txHash
     });
     
-    toast({
-      title: "Success",
-      description: "Your time capsule has been created successfully.",
-    });
+    console.log("Capsule created successfully in database:", newCapsule);
 
     // Pass the new capsule to the success callback
     onSuccess(newCapsule);
   } catch (error: any) {
     console.error("Error creating capsule:", error);
     onError(error.message || "Capsule creation failed");
-    toast({
-      title: "Error",
-      description: error.message || "Capsule creation failed",
-      variant: "destructive",
-    });
   }
 };

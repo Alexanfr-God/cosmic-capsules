@@ -8,21 +8,39 @@ import { validateCapsuleData } from "@/utils/capsuleValidation";
 import { handlePaymentComplete } from "@/services/capsulePaymentService";
 import { ensureUserProfile } from "@/services/capsuleCreationService";
 
-interface CapsuleCreationHandlerProps {
-  capsuleName: string;
-  message: string;
-  selectedDate: Date | undefined;
-  selectedImage: File | null;
-  auctionEnabled: boolean;
-  paymentMethod: number;
-  onSuccess: () => void;
-  onError: (error: string) => void;
-}
-
 export const useCapsuleCreation = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast(); // Move useToast to the component level
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { isConnected } = useAccount();
+
+  const validateCapsuleDataWithToast = (
+    userProfile: any,
+    isConnected: boolean,
+    capsuleName: string,
+    selectedDate?: Date
+  ): boolean => {
+    // This wrapper function calls validateCapsuleData and displays toasts
+    if (!capsuleName) {
+      toast({
+        title: "Error",
+        description: "Please enter a name for your time capsule",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (!selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select an unlock date for your time capsule",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return validateCapsuleData(userProfile, isConnected, capsuleName, selectedDate);
+  };
 
   const handlePaymentCompleteWrapper = async (
     success: boolean, 
@@ -71,7 +89,7 @@ export const useCapsuleCreation = () => {
   return {
     isLoading,
     setIsLoading,
-    validateCapsuleData,
+    validateCapsuleData: validateCapsuleDataWithToast,
     handlePaymentComplete: handlePaymentCompleteWrapper,
     userProfile,
     isConnected

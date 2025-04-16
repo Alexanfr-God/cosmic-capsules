@@ -1,14 +1,12 @@
+
 import React, { useState } from "react";
 import { useCapsuleModal } from "./CapsuleModalContext";
 import CreateCapsuleButton from "../capsule/CreateCapsuleButton";
 import { useCapsuleCreation } from "../capsule/CapsuleCreationHandler";
 import { useAuth } from "@/contexts/AuthContext";
-import { Capsule } from "@/services/capsuleService";
-import { ensureStorageBucketExists } from "@/utils/storageUtils";
-import { validateCapsuleData } from "@/utils/capsuleValidation";
 
 interface CapsuleModalActionsProps {
-  onCapsuleCreated?: (capsule: Capsule) => void;
+  onCapsuleCreated?: (capsule: any) => void;
   onClose: () => void;
 }
 
@@ -27,7 +25,7 @@ export const CapsuleModalActions: React.FC<CapsuleModalActionsProps> = ({
     resetForm
   } = useCapsuleModal();
   
-  const { user, refreshUserProfile } = useAuth();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const { validateCapsuleData, handlePaymentComplete, userProfile, isConnected } = useCapsuleCreation();
 
@@ -36,7 +34,7 @@ export const CapsuleModalActions: React.FC<CapsuleModalActionsProps> = ({
   };
 
   const onPaymentCompleteHandler = async (success: boolean, txHash?: string) => {
-    console.log("Payment completed handler called with success:", success);
+    console.log("Payment completed handler called with success:", success, "Transaction hash:", txHash);
     
     if (!validateCapsuleData(userProfile, isConnected, capsuleName, selectedDate)) {
       return;
@@ -70,6 +68,7 @@ export const CapsuleModalActions: React.FC<CapsuleModalActionsProps> = ({
     } catch (err: any) {
       console.error("Unexpected error in payment completion handler:", err);
       setError(err.message || "An unexpected error occurred");
+    } finally {
       setIsLoading(false);
     }
   };

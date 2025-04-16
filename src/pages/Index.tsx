@@ -10,7 +10,7 @@ import FeatureSection from "@/components/home/FeatureSection";
 import AuctionCarousel from "@/components/home/AuctionCarousel";
 import UpcomingCapsules from "@/components/home/UpcomingCapsules";
 import Testimonials from "@/components/home/Testimonials";
-import CreateCapsuleModal from "@/components/CreateCapsuleModal";
+import CreateCapsuleModal from "@/components/modals/CreateCapsuleModal";
 import { Button } from "@/components/ui/button";
 import { Rocket, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
